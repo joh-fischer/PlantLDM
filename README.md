@@ -1,4 +1,4 @@
 # PlantLDM
 
-- [x] todo1
-- [ ] todo2
+- [ ] Dataloader
+- [ ] Latent Diffusion Model
