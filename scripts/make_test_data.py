@@ -38,9 +38,9 @@ if __name__ == "__main__":
 
     # check if directories exist
     if not os.path.isdir(args.src_dir):
-        raise argparse.ArgumentError("src_dir does not exist!")
+        raise ValueError("src_dir does not exist!")
     if not os.path.isdir(args.dst_dir):
-        raise argparse.ArgumentError("dst_dir does not exist!")
+        raise ValueError("dst_dir does not exist!")
 
     dirs = os.listdir(args.src_dir)
 
