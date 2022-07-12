@@ -6,5 +6,6 @@
   /layers
     UNet.py
     AutoEncoder.py
+    README.md
   DDPM.py
 ```
