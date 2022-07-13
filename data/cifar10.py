@@ -31,13 +31,22 @@ class CIFAR10:
             transforms.Normalize(self.mean, self.std)
         ])
 
-        self.train_set = torchvision.datasets.CIFAR10(root='./data', train=True, download=True,
+        train_size = int(50000 * 0.9)
+        # val size is 10000 in cifar10
+        test_size = 50000 - train_size
+
+        self.train_set_full = torchvision.datasets.CIFAR10(root='./data', train=True, download=True,
                                                       transform=self.train_transform)
+        # TODO: check if this way of splitting in train, val and test is correct
+        self.train_set, self.test_set = torch.utils.data.random_split(self.train_set_full, [train_size, test_size])
+
         self.train_loader = torch.utils.data.DataLoader(self.train_set, batch_size=self.batch_size, shuffle=True)
 
         self.val_set = torchvision.datasets.CIFAR10(root='./data', train=False, download=True,
                                                     transform=self.val_transform)
         self.val_loader = torch.utils.data.DataLoader(self.val_set, batch_size=self.batch_size, shuffle=False)
+
+        self.test_loader = torch.utils.data.DataLoader(self.test_set, batch_size=self.batch_size, shuffle=False)
 
         # invert normalization for tensor to image transform
         self.inv_normalize = transforms.Compose([
@@ -54,6 +63,11 @@ class CIFAR10:
     def val(self):
         """ Return validation dataloader. """
         return self.val_loader
+
+    @property
+    def test(self):
+        """ Return test dataloader. """
+        return self.test_loader
 
     def idx2label(self, idx):
         """ Return class label for given index. """

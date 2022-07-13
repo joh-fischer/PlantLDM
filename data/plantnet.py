@@ -36,19 +36,27 @@ class PlantNet:
             transforms.ToTensor(),
         ])
 
+        self.test_transform = transforms.Compose([
+            transforms.ToTensor(),
+        ])
+
         # TODO: this has to be read from a config file
         dataset_full = PlantNetDataset(data_root="D:\\data\\test_data_dst\\")
 
-        train_size = int(0.8 * len(dataset_full))
-        val_size = len(dataset_full) - train_size
+        train_size = int(0.7 * len(dataset_full))
+        val_size = int(0.2 * len(dataset_full))
+        test_size = len(dataset_full) - train_size - val_size
 
-        self.train_set, self.val_set = torch.utils.data.random_split(dataset_full, [train_size, val_size])
+        self.train_set, self.val_set, self.test_set = torch.utils.data.random_split(dataset_full, [train_size, val_size, test_size])
 
         self.train_set.dataset.transform = self.train_transform
         self.train_loader = DataLoader(self.train_set, batch_size=self.batch_size, shuffle=True)
 
         self.val_set.dataset.transform = self.val_transform
-        self.val_loader = DataLoader(self.val_set, batch_size=self.batch_size, shuffle=False)
+        self.val_loader = DataLoader(self.val_set, batch_size=self.batch_size, shuffle=True)
+
+        self.test_set.dataset.transform = self.test_transform
+        self.test_loader = DataLoader(self.test_set, batch_size=self.batch_size, shuffle=False)
 
         # invert normalization for tensor to image transform
         self.inv_normalize = transforms.Compose([
@@ -65,6 +73,11 @@ class PlantNet:
     def val(self):
         """ Return validation dataloader. """
         return self.val_loader
+
+    @property
+    def test(self):
+        """ Return test dataloader. """
+        return self.test_loader
 
     def idx2label(self, idx):
         """ Return class label for given index. """
