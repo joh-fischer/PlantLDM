@@ -52,6 +52,10 @@ if __name__ == "__main__":
     for subdir, dirs, files in os.walk(args.src_dir):
 
         subdir_without_root = subdir.replace(args.src_dir, "")
+        # currently data is separated in test, train and val. We combine these and do the split later in the dataloader
+        subdir_without_root = subdir_without_root.replace("images_test", "")
+        subdir_without_root = subdir_without_root.replace("images_train", "")
+        subdir_without_root = subdir_without_root.replace("images_val", "")
         current_new_subdir = f"{args.dst_dir}\\{subdir_without_root}"
 
         # for performance reasons we create subdirs even if they don't have files in them. Else we would have to
