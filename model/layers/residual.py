@@ -1,46 +1,36 @@
 import torch.nn as nn
 
 
-class ResidualBlock(nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: int = 3):
+class ResidualLayer(nn.Module):
+    def __init__(self, in_channels: int, out_channels: int, hidden_dim: int):
         """
-        Residual block as in https://arxiv.org/abs/1512.03385
+        Residual layer as specified in https://arxiv.org/abs/1711.00937. The original
+        layer order is ReLU, 3x3 conv, ReLU, 1x1 conv (paper p. 5) with all having
+        256 hidden units.
+
         Args:
             in_channels (int): number of input channels
             out_channels (int): number of output channels
-            kernel_size: filter size for convolutions
+            hidden_dim (int): number of hidden units
         """
-        super(ResidualBlock, self).__init__()
+        super(ResidualLayer, self).__init__()
 
-        padding = (kernel_size // 2, kernel_size // 2)
-
-        if in_channels == out_channels:
-            stride = (1, 1)
-            self.shortcut = nn.Identity()
-        else:
-            stride = (2, 2)
-            self.shortcut = nn.Conv2d(in_channels, out_channels, kernel_size=(1, 1), padding=(0, 0), stride=stride)
-
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, padding=padding, stride=stride)
-        self.conv1_bn = nn.BatchNorm2d(out_channels)
-
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, padding=padding)
-        self.conv2_bn = nn.BatchNorm2d(out_channels)
-
-        self.activation = nn.ReLU()
+        self.conv3x3 = nn.Conv2d(in_channels, hidden_dim, kernel_size=3,
+                                 padding=1, stride=1, bias=False)
+        self.conv1x1 = nn.Conv2d(hidden_dim, out_channels, kernel_size=1,
+                                 padding=0, stride=1, bias=False)
+        self.activation = nn.ReLU(True)
 
     def forward(self, x):
-        identity = self.shortcut(x)
+        identity = x
 
-        x = self.conv1(x)
-        x = self.conv1_bn(x)
         x = self.activation(x)
+        x = self.conv3x3(x)
 
-        x = self.conv2(x)
-        x = self.conv2_bn(x)
+        x = self.activation(x)
+        x = self.conv1x1(x)
 
         x += identity
-        x = self.activation(x)
 
         return x
 
@@ -48,14 +38,8 @@ class ResidualBlock(nn.Module):
 if __name__ == "__main__":
     import torch
 
-    # with down-sampling and increasing the layers
-    block = ResidualBlock(16, 32, 3)
-    input1 = torch.randn((32, 16, 224, 224))
-    print("Input shape:", input1.shape)
-    print("Output shape:", block(input1).shape)
+    ipt = torch.randn((32, 128, 224, 224))
+    rl = ResidualLayer(128, 128, 256)
 
-    # without down-sampling
-    block = ResidualBlock(32, 32, 3)
-    input2 = torch.randn((32, 32, 224, 224))
-    print("Input shape:", input2.shape)
-    print("Output shape:", block(input2).shape)
+    print("Input shape:", ipt.shape)
+    print("Output shape:", rl(ipt).shape)
