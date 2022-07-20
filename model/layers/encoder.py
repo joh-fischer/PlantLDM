@@ -5,7 +5,11 @@ from residual import ResidualLayer
 class Encoder(nn.Module):
     def __init__(self, in_channels: int, latent_dim: int, n_res_layers: int = 2, res_hidden_dim: int = 256):
         """
-        Encoder for VQ-VAE like specified in https://arxiv.org/abs/1711.00937. The
+        Encoder for VQ-VAE like specified in https://arxiv.org/abs/1711.00937. According to the paper
+        'the encoder consists of 2 strided convolutional layers with stride 2 and window size 4 × 4,
+        followed by two residual 3 × 3 blocks (implemented as ReLU, 3x3 conv, ReLU, 1x1 conv), all
+        having 256 hidden units' (paper p. 5).
+
         Args:
             in_channels (int): Number of input channels
             latent_dim (int): Dimension of the latent space
