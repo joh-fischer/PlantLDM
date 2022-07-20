@@ -53,5 +53,5 @@ if __name__ == "__main__":
     enc = Encoder(3, 10)
     out = enc(ipt)
 
-    print("Input shape:", ipt.shape)
-    print("Output shape:", out.shape)
+    print("Input shape:", ipt.shape)    # [bs, 3, 128, 128]
+    print("Output shape:", out.shape)   # [bs, 10, 32, 32]
