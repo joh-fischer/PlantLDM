@@ -1,7 +1,0 @@
-torch
-torchvision
-tensorboard
-pyyaml
-tqdm
-pillow
-
