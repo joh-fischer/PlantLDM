@@ -1,5 +1,5 @@
 import torch.nn as nn
-from residual import ResidualLayer
+from model.layers.residual import ResidualLayer
 
 
 class Encoder(nn.Module):

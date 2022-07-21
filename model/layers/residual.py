@@ -38,8 +38,8 @@ class ResidualLayer(nn.Module):
 if __name__ == "__main__":
     import torch
 
-    ipt = torch.randn((32, 128, 224, 224))
-    rl = ResidualLayer(128, 128, 256)
+    ipt = torch.randn((32, 64, 128, 128))
+    rl = ResidualLayer(64, 64, 128)
 
-    print("Input shape:", ipt.shape)
-    print("Output shape:", rl(ipt).shape)
+    print("Input shape:", ipt.shape)        # [bs, 32, 64, 128, 128]
+    print("Output shape:", rl(ipt).shape)   # [bs, 32, 64, 128, 128]
