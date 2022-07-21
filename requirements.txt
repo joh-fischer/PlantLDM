@@ -4,4 +4,4 @@ tensorboard
 pyyaml
 tqdm
 pillow
-
+matplotlib
