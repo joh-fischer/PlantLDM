@@ -20,11 +20,11 @@ class VQVAE(nn.Module):
     def forward(self, x):
         z_e = self.encoder(x)
 
-        z_q = self.vq(z_e)
+        z_q, z_q_sg = self.vq(z_e)
 
-        x_hat = self.decoder(z_q)
+        x_hat = self.decoder(z_q_sg)
 
-        return z_e, z_q, x_hat
+        return z_e, z_q, z_q_sg, x_hat
 
 
 if __name__ == "__main__":
@@ -33,9 +33,10 @@ if __name__ == "__main__":
     ipt = torch.randn((16, 3, 128, 128))
 
     vqvae = VQVAE(3, 10)
-    z, q, rec = vqvae(ipt)
+    z, q, q_sg, rec = vqvae(ipt)
 
     print("Input shape:", ipt.shape)    # [bs, 3, 128, 128]
     print("z_e shape:", z.shape)        # [bs, 10, 32, 32]
     print("z_q shape:", q.shape)        # [bs, 10, 32, 32]
+    print("z_q sg shape:", q_sg.shape)  # [bs, 10, 32, 32]
     print("rec shape:", rec.shape)      # [bs, 3, 128, 128]
