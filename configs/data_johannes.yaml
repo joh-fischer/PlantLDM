@@ -1,0 +1,2 @@
+class_file_path: '/home/johannes-f/OneDrive/Computer Vision & Visual Synthesis/project/code/Merkur-PlantLDM/dataloader/plantnet_300K_species_names.json'
+data_dir: '/home/johannes-f/OneDrive/Computer Vision & Visual Synthesis/project/code/big_data/PlantNet_64'
