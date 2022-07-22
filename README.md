@@ -13,7 +13,9 @@
 - [ ] Training of VQGAN
 
 29.07.
-- [ ] Deployment (somewhere) + Full training with CIFAR10; Deployment of resized and cropped plant images (128x128)
+- [ ] Deployment (somewhere)
+- [ ] Full training with CIFAR10
+- [ ] Deployment of resized and cropped plant images (128x128)
 
 01.08.
 - [ ] Adjustments to models 
@@ -22,14 +24,46 @@
 - [ ] Training with PlantNet
 
 
+## Setup
+
+Clone the repository and create a virtual environment (optional)
+
+```
+virtualenv venv
+source venv/bin/activate
+```
+
+Then install the dependencies
+```
+pip install -r requirements.txt
+```
+
+## Tensorboard
+
+In order to monitor the losses and visualizations just `cd` into the repo and run
+```
+tensorboard --logdir=logs
+```
+
 ## VQ-VAE
 
 Implementation of VQ-VAE ([paper](https://arxiv.org/abs/1711.00937v2)).
 
 ### Usage
+
+For the usage on the dataset specified in the data config (`configs/data_<>.yaml`) you can run the following on the
+command line
+
 ```
 python3 train_first_stage.py --name run/e10 --epochs 10 --data-config config/data_jo.yaml
 ```
+
+To first debug the code with `CIFAR10` just run
+
+```
+python3 train_first_stage.py --name debug --epochs 10 --debug
+```
+
 
 ### Help message
 
