@@ -12,7 +12,7 @@ from utils.logger import Logger
 from utils.helpers import timer
 from utils.helpers import load_vqvae_checkpoint, save_vqvae_checkpoint
 from utils.visualization import get_reconstruction_figure
-from dataloader import CIFAR10
+from dataloader import CIFAR10, PlantNet
 
 
 CHECKPOINT_DIR = 'checkpoints'
@@ -31,6 +31,10 @@ parser.add_argument('--lr', default=0.0001,
                     type=float, metavar='LR', help='Initial learning rate (default: 0.0001)')
 parser.add_argument('--config', default='configs/vqvae.yaml',
                     metavar='PATH', help='Path to model config file (default: configs/vqvae.yaml)')
+parser.add_argument('--data-config', default='configs/data_johannes.yaml',
+                    metavar='PATH', help='Path to model config file (default: configs/data_johannes.yaml)')
+parser.add_argument('--debug', action='store_true',
+                    help='If true, trains on CIFAR10')
 parser.add_argument('--gpus', default=0, type=int,
                     nargs='+', metavar='GPUS', help='If GPU(s) available, which GPU(s) to use for training.')
 parser.add_argument('--ckpt-save', default=True, action=argparse.BooleanOptionalAction,
@@ -72,9 +76,13 @@ def main():
         raise ValueError('Currently multi-gpu training is not possible')
 
     # load data
-    data = CIFAR10(args.batch_size)     # TODO: real data
+    if args.debug:
+        data = CIFAR10(args.batch_size)
+    else:
+        data_cfg = yaml.load(open(args.data_config, 'r'), Loader=yaml.Loader)
+        data = PlantNet(**data_cfg, batch_size=args.batch_size)
 
-    # read config file
+    # read config file for model
     cfg = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
 
     # create model and optimizer
