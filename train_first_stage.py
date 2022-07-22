@@ -32,7 +32,7 @@ parser.add_argument('--lr', default=0.0001,
 parser.add_argument('--config', default='configs/vqvae.yaml',
                     metavar='PATH', help='Path to model config file (default: configs/vqvae.yaml)')
 parser.add_argument('--data-config', default='configs/data_johannes.yaml',
-                    metavar='PATH', help='Path to model config file (default: configs/data_johannes.yaml)')
+                    metavar='PATH', help='Path to model config file (default: configs/data_jo.yaml)')
 parser.add_argument('--debug', action='store_true',
                     help='If true, trains on CIFAR10')
 parser.add_argument('--gpus', default=0, type=int,
