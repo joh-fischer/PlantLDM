@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import yaml
 import argparse
@@ -10,7 +11,8 @@ from model.vqvae import VQVAE
 from utils.logger import Logger
 from utils.helpers import timer
 from utils.helpers import load_vqvae_checkpoint, save_vqvae_checkpoint
-from test_data.dataloader import CIFAR10        # TODO: real data
+from utils.visualization import get_reconstruction_figure
+from dataloader import CIFAR10
 
 
 CHECKPOINT_DIR = 'checkpoints'
@@ -23,10 +25,10 @@ parser.add_argument('--name', '-n', default='',
                     type=str, metavar='NAME', help='Model name and folder where logs are stored')
 parser.add_argument('--epochs', default=2,
                     type=int, metavar='N', help='Number of epochs to run (default: 2)')
-parser.add_argument('--batch-size', default=16, metavar='N',
-                    type=int, help='Mini-batch size (default: 16)')
-parser.add_argument('--lr', default=0.001,
-                    type=float, metavar='LR', help='Initial learning rate (default: 0.001)')
+parser.add_argument('--batch-size', default=64, metavar='N',
+                    type=int, help='Mini-batch size (default: 64)')
+parser.add_argument('--lr', default=0.0001,
+                    type=float, metavar='LR', help='Initial learning rate (default: 0.0001)')
 parser.add_argument('--config', default='configs/vqvae.yaml',
                     metavar='PATH', help='Path to model config file (default: configs/vqvae.yaml)')
 parser.add_argument('--gpus', default=0, type=int,
@@ -49,6 +51,7 @@ def main():
         print("{:<16}: {}".format(name, val))
 
     # setup paths and logging
+    args.name = 'first_stage/' + args.name
     running_log_dir = os.path.join(LOG_DIR, args.name, f'{TIMESTAMP}')
     running_ckpt_dir = os.path.join(CHECKPOINT_DIR, args.name, f'{TIMESTAMP}')
     print("{:<16}: {}".format('logdir', running_log_dir))
@@ -69,7 +72,7 @@ def main():
         raise ValueError('Currently multi-gpu training is not possible')
 
     # load data
-    data = CIFAR10(args.batch_size)
+    data = CIFAR10(args.batch_size)     # TODO: real data
 
     # read config file
     cfg = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
@@ -82,7 +85,7 @@ def main():
 
     # resume training
     if args.load_checkpoint:
-        model, optimizer, start_epoch = load_vqvae_checkpoint(model, optimizer, args.load_checkpoint, device)
+        model, start_epoch = load_vqvae_checkpoint(model, args.load_checkpoint, device)
         args.epochs += start_epoch
     else:
         start_epoch = 0
@@ -96,13 +99,19 @@ def main():
 
         train(model, data.train, optimizer, device)
 
-        print("Loss: ", logger.epoch['loss'].avg)
+        validate(model, data.val, device)
+
+        # logging
+        output = [f'{k}: {v.avg:.4f}' for k, v in logger.epoch.items()]
+        print(*output, sep=' - ')
+        for k, v in logger.epoch.items():
+            logger.tensorboard.add_scalar(k, v.avg, global_step=epoch)
 
         # save logs and checkpoint
         if (epoch + 1) % args.save_interval == 0 or (epoch + 1) == args.epochs:
             logger.save()
             if args.save_checkpoint:
-                save_vqvae_checkpoint(model, optimizer, running_ckpt_dir, logger)
+                save_vqvae_checkpoint(model, running_ckpt_dir, logger)
 
     elapsed_time = timer(t_start, time.time())
     print(f"Total training time: {elapsed_time}")
@@ -110,32 +119,59 @@ def main():
 
 def train(model, train_loader, optimizer, device):
     model.train()
+
+    is_first = True
     for x, _ in tqdm(train_loader, desc="Training"):
         x = x.to(device)
 
-        z_e, z_q, z_q_sg, x_hat = model(x)
+        x_hat, emb_loss = model(x)
 
-        # log p(x | z_q(x))
-        recon_loss = torch.nn.functional.mse_loss(x_hat, x)
-        # ( sg[z_e(x)] - e )
-        embedding_loss = torch.nn.functional.mse_loss(z_q, z_e.detach())
-        # beta * ( z_e(x) - sg[e] )
-        commitment_loss = torch.nn.functional.mse_loss(z_q.detach(), z_e)
+        rec_loss = torch.nn.functional.mse_loss(x_hat, x)
 
-        loss = recon_loss + embedding_loss + 0.25 * commitment_loss
+        loss = rec_loss + emb_loss
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        logger.log_metrics({'loss': loss.item()}, phase='train', aggregate=True, n=x.shape[0])
+        metrics = {'rec_loss': rec_loss, 'emb_loss': emb_loss, 'loss': loss}
+        logger.log_metrics(metrics, phase='train', aggregate=True, n=x.shape[0])
+
+        if is_first:
+            is_first = False
+            logger.tensorboard.add_figure('Train: Original vs. Reconstruction',
+                                          get_reconstruction_figure(x, x_hat, n_ims=8),
+                                          global_step=logger.running_epoch)
 
 
 @torch.no_grad()
 def validate(model, val_loader, device):
     model.eval()
-    pass
+
+    is_first = True
+    for x, _ in tqdm(val_loader, desc="Validation"):
+        x = x.to(device)
+
+        x_hat, emb_loss = model(x)
+
+        rec_loss = torch.nn.functional.mse_loss(x_hat, x)
+
+        loss = rec_loss + emb_loss
+
+        metrics = {'val_rec_loss': rec_loss, 'val_emb_loss': emb_loss, 'val_loss': loss}
+        logger.log_metrics(metrics, phase='val', aggregate=True, n=x.shape[0])
+
+        if is_first:
+            is_first = False
+            logger.tensorboard.add_figure('Val: Original vs. Reconstruction',
+                                          get_reconstruction_figure(x, x_hat, n_ims=8),
+                                          global_step=logger.running_epoch)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Exit training with keyboard interrupt!")
+        logger.save()
+        sys.exit(0)

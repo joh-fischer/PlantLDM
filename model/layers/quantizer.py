@@ -39,14 +39,13 @@ class VectorQuantizer(nn.Module):
 
         # calculate distances between each z [bs*h*w, c]
         # and e_j [n_emb, c]: (z - e_j)² = z² + e² - e*z*2
-        # TODO: maybe make more intuitive with (z - e_j)²
         z_sq = torch.sum(z_flat**2, dim=1, keepdim=True)
         e_sq = torch.sum(self.embedding.weight**2, dim=1)
         e_z = torch.matmul(z_flat, self.embedding.weight.t())
-        dists = z_sq + e_sq - 2 * e_z    # [bs*h*w, n_emb]
+        distances = z_sq + e_sq - 2 * e_z    # [bs*h*w, n_emb]
 
         # get index of the closest embedding e_j for each vector z
-        argmin_inds = torch.argmin(dists, dim=1)
+        argmin_inds = torch.argmin(distances, dim=1)
 
         # one-hot encode
         argmin_one_hot = nn.functional.one_hot(argmin_inds, num_classes=self.n_emb).float().to(z.device)
@@ -56,13 +55,13 @@ class VectorQuantizer(nn.Module):
 
         # compute loss (embedding & commitment)
         embedding_loss = torch.mean((z_q.detach() - z)**2)
-        commitment_loss = self.beta * torch.mean((z_q - z.detach()))
+        commitment_loss = self.beta * torch.mean((z_q - z.detach())**2)
         loss = embedding_loss + commitment_loss
 
         # preserve gradients
         z_q = z + (z_q - z).detach()
 
-        # reshape back to [
+        # reshape back to [bs, c, h, w]
         z_q = z_q.permute(0, 3, 1, 2).contiguous()
 
         return z_q, loss

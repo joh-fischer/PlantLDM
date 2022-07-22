@@ -37,4 +37,4 @@ if __name__ == "__main__":
 
     print("Input shape:", ipt.shape)    # [bs, 3, 128, 128]
     print("rec shape:", rec.shape)      # [bs, 3, 128, 128]
-    print("Loss:", out_loss)  # [bs, 10, 32, 32]
+    print("Loss:", out_loss)            # [bs, 10, 32, 32]
