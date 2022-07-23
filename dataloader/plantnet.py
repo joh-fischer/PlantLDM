@@ -50,8 +50,8 @@ class PlantNet:
 
         dataset_full = PlantNetDataset(data_root=data_dir, classes_list=self.classes)
 
-        train_size = int(0.7 * len(dataset_full))
-        val_size = int(0.2 * len(dataset_full))
+        train_size = int(0.8 * len(dataset_full))
+        val_size = int(0.1 * len(dataset_full))
         test_size = len(dataset_full) - train_size - val_size
 
         self.train_set, self.val_set, self.test_set = torch.utils.data.random_split(dataset_full,
@@ -146,7 +146,7 @@ class PlantNetDataset(Dataset):
 
 
 if __name__ == "__main__":
-    plantnet_dir = '/home/johannes-f/OneDrive/Computer Vision & Visual Synthesis/project/code/big_data/PlantNet_64'
+    plantnet_dir = '/home/johannes-f/Documents/datasets/PlantNet_64'
 
     data = PlantNet(class_file_path='plantnet_300K_species_names.json',
                     data_dir=plantnet_dir,
