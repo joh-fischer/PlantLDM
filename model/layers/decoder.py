@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 from model.layers.residual import ResidualLayer
 
@@ -47,10 +48,7 @@ class Decoder(nn.Module):
 
 
 if __name__ == "__main__":
-    import torch
-
     latent = torch.randn((16, 10, 32, 32))
-
     dec = Decoder(10, 3)
     out = dec(latent)
 
