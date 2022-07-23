@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
         print("images")
         print("\t", ims.shape)
-        print(f"\t {ims.min()} < {torch.mean(ims)} < {ims.min()}")
+        print(f"\t {ims.min()} < {torch.mean(ims)} < {ims.max()}")
         print("labels")
         print("\t", labels)
 

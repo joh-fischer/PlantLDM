@@ -155,7 +155,7 @@ if __name__ == "__main__":
     for ims, labels in data.train:
         print("images")
         print("\t", ims.shape)
-        print(f"\t {ims.min()} < {torch.mean(ims)} < {ims.min()}")
+        print(f"\t {ims.min()} < {torch.mean(ims)} < {ims.max()}")
         print("labels")
         print("\t", labels)
         print("\t", [data.idx2label(i) for i in labels])
