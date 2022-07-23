@@ -86,6 +86,8 @@ class Logger:
 
         self.epoch = {}
 
+        self.global_train_step = 0
+
     @property
     def tensorboard(self):
         """ Returns tensorboard `SummaryWriter` instance. """
