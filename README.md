@@ -55,13 +55,13 @@ For the usage on the dataset specified in the data config (`configs/data_<>.yaml
 command line
 
 ```
-python3 train_first_stage.py --name run/e10 --epochs 10 --data-config config/data_jo.yaml
+python3 train_vqvae.py --name run/e10 --epochs 10 --data-config config/data_jo.yaml
 ```
 
 To first debug the code with `CIFAR10` just run
 
 ```
-python3 train_first_stage.py --name debug --epochs 10 --debug
+python3 train_vqvae.py --name debug --epochs 10 --debug
 ```
 
 
