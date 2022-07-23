@@ -11,7 +11,7 @@ from model.vqvae import VQVAE
 from utils.logger import Logger
 from utils.helpers import timer
 from utils.helpers import load_vqvae_checkpoint, save_vqvae_checkpoint
-from utils.visualization import get_reconstruction_figure
+from utils.visualization import get_original_reconstruction_figure
 from dataloader import CIFAR10, PlantNet
 
 
@@ -41,8 +41,6 @@ parser.add_argument('--ckpt-save', default=True, action=argparse.BooleanOptional
                     dest='save_checkpoint', help='Save checkpoints to folder')
 parser.add_argument('--load-ckpt', default=None, metavar='PATH',
                     dest='load_checkpoint', help='Load model checkpoint and continue training')
-parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
-                    help='Evaluate model on test set')
 parser.add_argument('--log-save-interval', default=5, type=int, metavar='N',
                     dest='save_interval', help="Interval in which logs are saved to disk (default: 5)")
 
@@ -148,7 +146,7 @@ def train(model, train_loader, optimizer, device):
         if is_first:
             is_first = False
             logger.tensorboard.add_figure('Train: Original vs. Reconstruction',
-                                          get_reconstruction_figure(x, x_hat, n_ims=8),
+                                          get_original_reconstruction_figure(x, x_hat, n_ims=8),
                                           global_step=logger.running_epoch)
 
 
@@ -172,7 +170,7 @@ def validate(model, val_loader, device):
         if is_first:
             is_first = False
             logger.tensorboard.add_figure('Val: Original vs. Reconstruction',
-                                          get_reconstruction_figure(x, x_hat, n_ims=8),
+                                          get_original_reconstruction_figure(x, x_hat, n_ims=8),
                                           global_step=logger.running_epoch)
 
 
