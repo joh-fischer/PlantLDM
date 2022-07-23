@@ -41,7 +41,7 @@ class Decoder(nn.Module):
         x = self.activation(x)
 
         x = self.conv2(x)
-        x = self.activation(x)
+        x = torch.tanh(x)   # restrict to [-1, 1]
 
         return x
 
@@ -50,8 +50,10 @@ if __name__ == "__main__":
     import torch
 
     latent = torch.randn((16, 10, 32, 32))
+
     dec = Decoder(10, 3)
     out = dec(latent)
 
     print("Input shape:", latent.shape)     # [bs, 10, 32, 32]
     print("Output shape:", out.shape)       # [bs, 3, 128, 128]
+    print(f"\t {out.min()} < {torch.mean(out)} < {out.max()}")
