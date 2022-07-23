@@ -44,6 +44,7 @@ parser.add_argument('--load-ckpt', default=None, metavar='PATH',
 parser.add_argument('--log-save-interval', default=5, type=int, metavar='N',
                     dest='save_interval', help="Interval in which logs are saved to disk (default: 5)")
 
+
 logger = Logger(LOG_DIR)
 
 
@@ -108,10 +109,8 @@ def main():
         validate(model, data.val, device)
 
         # logging
-        output = [f'{k}: {v.avg:.4f}' for k, v in logger.epoch.items()]
-        print(*output, sep=' - ')
-        for k, v in logger.epoch.items():
-            logger.tensorboard.add_scalar(k, v.avg, global_step=epoch)
+        output = ' - '.join([f'{k}: {v.avg:.4f}' for k, v in logger.epoch.items()])
+        print(output)
 
         # save logs and checkpoint
         if (epoch + 1) % args.save_interval == 0 or (epoch + 1) == args.epochs:
@@ -126,14 +125,12 @@ def main():
 def train(model, train_loader, optimizer, device):
     model.train()
 
-    is_first = True
     for x, _ in tqdm(train_loader, desc="Training"):
         x = x.to(device)
 
         x_hat, emb_loss = model(x)
 
         rec_loss = torch.nn.functional.mse_loss(x_hat, x)
-
         loss = rec_loss + emb_loss
 
         optimizer.zero_grad()
@@ -143,11 +140,18 @@ def train(model, train_loader, optimizer, device):
         metrics = {'rec_loss': rec_loss, 'emb_loss': emb_loss, 'loss': loss}
         logger.log_metrics(metrics, phase='train', aggregate=True, n=x.shape[0])
 
-        if is_first:
-            is_first = False
+        if logger.global_train_step % 150 == 0:
             logger.tensorboard.add_figure('Train: Original vs. Reconstruction',
                                           get_original_reconstruction_figure(x, x_hat, n_ims=8),
-                                          global_step=logger.running_epoch)
+                                          global_step=logger.global_train_step)
+            logger.tensorboard.add_scalar('Train/rec_loss', logger.epoch['rec_loss'].avg,
+                                          global_step=logger.global_train_step)
+            logger.tensorboard.add_scalar('Train/emb_loss', logger.epoch['emb_loss'].avg,
+                                          global_step=logger.global_train_step)
+            logger.tensorboard.add_scalar('Train/loss', logger.epoch['loss'].avg,
+                                          global_step=logger.global_train_step)
+
+        logger.global_train_step += 1
 
 
 @torch.no_grad()
@@ -161,7 +165,6 @@ def validate(model, val_loader, device):
         x_hat, emb_loss = model(x)
 
         rec_loss = torch.nn.functional.mse_loss(x_hat, x)
-
         loss = rec_loss + emb_loss
 
         metrics = {'val_rec_loss': rec_loss, 'val_emb_loss': emb_loss, 'val_loss': loss}
@@ -171,7 +174,14 @@ def validate(model, val_loader, device):
             is_first = False
             logger.tensorboard.add_figure('Val: Original vs. Reconstruction',
                                           get_original_reconstruction_figure(x, x_hat, n_ims=8),
-                                          global_step=logger.running_epoch)
+                                          global_step=logger.global_train_step)
+
+    logger.tensorboard.add_scalar('Val/rec_loss', logger.epoch['rec_loss'].avg,
+                                  global_step=logger.global_train_step)
+    logger.tensorboard.add_scalar('Val/emb_loss', logger.epoch['emb_loss'].avg,
+                                  global_step=logger.global_train_step)
+    logger.tensorboard.add_scalar('Val/loss', logger.epoch['loss'].avg,
+                                  global_step=logger.global_train_step)
 
 
 if __name__ == "__main__":
