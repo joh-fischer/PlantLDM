@@ -11,6 +11,7 @@ from model.vqvae import VQVAE
 from utils.logger import Logger
 from utils.helpers import timer
 from utils.helpers import load_vqvae_checkpoint, save_vqvae_checkpoint
+from utils.helpers import log2tensorboard_vqvae
 from utils.visualization import get_original_reconstruction_figure
 from dataloader import CIFAR10, PlantNet
 
@@ -92,7 +93,8 @@ def main():
 
     # resume training
     if args.load_checkpoint:
-        model, start_epoch = load_vqvae_checkpoint(model, args.load_checkpoint, device)
+        model, start_epoch, global_train_step = load_vqvae_checkpoint(model, args.load_checkpoint, device)
+        logger.global_train_step = global_train_step
         args.epochs += start_epoch
     else:
         start_epoch = 0
@@ -141,17 +143,14 @@ def train(model, train_loader, optimizer, device):
         logger.log_metrics(metrics, phase='train', aggregate=True, n=x.shape[0])
 
         if logger.global_train_step % 150 == 0:
+            log2tensorboard_vqvae(logger, 'Train', ['rec_loss', 'emb_loss', 'loss'])
             logger.tensorboard.add_figure('Train: Original vs. Reconstruction',
                                           get_original_reconstruction_figure(x, x_hat, n_ims=8),
                                           global_step=logger.global_train_step)
-            logger.tensorboard.add_scalar('Train/rec_loss', logger.epoch['rec_loss'].avg,
-                                          global_step=logger.global_train_step)
-            logger.tensorboard.add_scalar('Train/emb_loss', logger.epoch['emb_loss'].avg,
-                                          global_step=logger.global_train_step)
-            logger.tensorboard.add_scalar('Train/loss', logger.epoch['loss'].avg,
-                                          global_step=logger.global_train_step)
 
         logger.global_train_step += 1
+
+    log2tensorboard_vqvae(logger, 'Train', ['rec_loss', 'emb_loss', 'loss'])
 
 
 @torch.no_grad()
@@ -176,12 +175,7 @@ def validate(model, val_loader, device):
                                           get_original_reconstruction_figure(x, x_hat, n_ims=8),
                                           global_step=logger.global_train_step)
 
-    logger.tensorboard.add_scalar('Val/rec_loss', logger.epoch['rec_loss'].avg,
-                                  global_step=logger.global_train_step)
-    logger.tensorboard.add_scalar('Val/emb_loss', logger.epoch['emb_loss'].avg,
-                                  global_step=logger.global_train_step)
-    logger.tensorboard.add_scalar('Val/loss', logger.epoch['loss'].avg,
-                                  global_step=logger.global_train_step)
+    log2tensorboard_vqvae(logger, 'Val', ['val_rec_loss', 'val_emb_loss', 'val_loss'])
 
 
 if __name__ == "__main__":

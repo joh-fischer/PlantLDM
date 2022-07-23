@@ -61,7 +61,7 @@ python3 train_vqvae.py --name run/e10 --epochs 10 --data-config config/data_jo.y
 To first debug the code with `CIFAR10` just run
 
 ```
-python3 train_vqvae.py --name debug --epochs 10 --debug
+python3 train_vqvae.py --name mydebug --epochs 10 --debug
 ```
 
 
@@ -79,14 +79,13 @@ options:
   --batch-size N        Mini-batch size (default: 64)
   --lr LR               Initial learning rate (default: 0.0001)
   --config PATH         Path to model config file (default: configs/vqvae.yaml)
-  --data-config PATH    Path to model config file (default: configs/data_johannes.yaml)
+  --data-config PATH    Path to model config file (default: configs/data_jo.yaml)
   --debug               If true, trains on CIFAR10
   --gpus GPUS [GPUS ...]
                         If GPU(s) available, which GPU(s) to use for training.
   --ckpt-save, --no-ckpt-save
                         Save checkpoints to folder (default: True)
   --load-ckpt PATH      Load model checkpoint and continue training
-  -e, --evaluate        Evaluate model on test set
   --log-save-interval N
                         Interval in which logs are saved to disk (default: 5)
 ```

@@ -7,20 +7,30 @@ def load_vqvae_checkpoint(model, filepath, device):
     if os.path.isfile(filepath):
         ckpt = torch.load(filepath, map_location=device)
         start_epoch = ckpt['epoch'] + 1
+        global_train_step = ckpt['global_train_step']
         model.load_state_dict(ckpt['model_state_dict'])
         print("{:<18}: {} (epoch: {})".format('Loaded checkpoint', filepath, start_epoch))
     else:
         raise ValueError("Checkpoint path '{}' does not exist!".format(filepath))
 
-    return model, start_epoch
+    return model, start_epoch, global_train_step
 
 
 def save_vqvae_checkpoint(model, ckpt_dir, logger):
     epoch = logger.running_epoch
-    state = {'epoch': epoch, 'model_state_dict': model.state_dict()}
+    global_train_step = logger.global_train_step
+    state = {'epoch': epoch, 'model_state_dict': model.state_dict(),
+             'global_train_step': global_train_step}
     filename = os.path.join(ckpt_dir, f'e{epoch + 1}.pt')
     print(f"Save checkpoint to '{filename}'")
     torch.save(state, filename)
+
+
+def log2tensorboard_vqvae(logger, global_tag, tags):
+    for tag in tags:
+        tb_tag = global_tag + '/' + tag
+        logger.tensorboard.add_scalar(tb_tag, logger.epoch[tag].avg,
+                                      global_step=logger.global_train_step)
 
 
 def timer(start, end):
