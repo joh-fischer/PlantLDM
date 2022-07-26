@@ -1,4 +1,5 @@
 import os
+import pathlib
 import sys
 import time
 import yaml
@@ -15,9 +16,12 @@ from utils.helpers import log2tensorboard_vqvae
 from utils.visualization import get_original_reconstruction_figure
 from dataloader import CIFAR10, PlantNet
 
+# TODO: check if this is necessary
+# from: https://stackoverflow.com/questions/20554074/sklearn-omp-error-15-initializing-libiomp5md-dll-but-found-mk2iomp5md-dll-a
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 CHECKPOINT_DIR = 'checkpoints'
-LOG_DIR = 'logs'
+LOG_DIR = os.path.join(pathlib.Path(__file__).parent.resolve(), 'logs')
 TIMESTAMP = datetime.now().strftime('%y-%m-%d_%H%M%S')
 
 
@@ -28,12 +32,14 @@ parser.add_argument('--epochs', default=2,
                     type=int, metavar='N', help='Number of epochs to run (default: 2)')
 parser.add_argument('--batch-size', default=64, metavar='N',
                     type=int, help='Mini-batch size (default: 64)')
+parser.add_argument('--image-size', default=128, metavar='N',
+                    type=int, help='Size that images should be resized to before processing (default: 128)')
 parser.add_argument('--lr', default=0.0001,
                     type=float, metavar='LR', help='Initial learning rate (default: 0.0001)')
 parser.add_argument('--config', default='configs/vqvae.yaml',
                     metavar='PATH', help='Path to model config file (default: configs/vqvae.yaml)')
-parser.add_argument('--data-config', default='configs/data_jo.yaml',
-                    metavar='PATH', help='Path to model config file (default: configs/data_jo.yaml)')
+parser.add_argument('--data-config', default='configs/data_se.yaml',
+                    metavar='PATH', help='Path to model config file (default: configs/data_se.yaml)')
 parser.add_argument('--debug', action='store_true',
                     help='If true, trains on CIFAR10')
 parser.add_argument('--gpus', default=0, type=int,
@@ -80,7 +86,7 @@ def main():
         data = CIFAR10(args.batch_size)
     else:
         data_cfg = yaml.load(open(args.data_config, 'r'), Loader=yaml.Loader)
-        data = PlantNet(**data_cfg, batch_size=args.batch_size)
+        data = PlantNet(**data_cfg, batch_size=args.batch_size, image_size=args.image_size)
 
     # read config file for model
     cfg = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)

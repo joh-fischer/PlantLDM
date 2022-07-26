@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, Dataset
 
 
 class PlantNet:
-    def __init__(self, class_file_path: str, data_dir: str, batch_size: int = 16):
+    def __init__(self, class_file_path: str, data_dir: str, batch_size: int = 16, image_size: int = None):
         """
         Wrapper to load, preprocess and deprocess PlantNet300k dataset.
         Args:
@@ -20,7 +20,12 @@ class PlantNet:
         if not os.path.exists(data_dir):
             raise ValueError(f'Path "{data_dir}" does not exist')
 
+        data_dir_test = os.path.join(data_dir, "images_test")
+        data_dir_val = os.path.join(data_dir, "images_val")
+        data_dir_train = os.path.join(data_dir, "images_train")
+
         self.batch_size = batch_size
+        self.image_size = image_size
 
         class_file = open(class_file_path, 'r')
         self.class_to_name = json.load(class_file)
@@ -48,27 +53,21 @@ class PlantNet:
             transforms.Normalize(self.mean, self.std)
         ])
 
-        dataset_full = PlantNetDataset(data_root=data_dir, classes_list=self.classes)
-
-        train_size = int(0.8 * len(dataset_full))
-        val_size = int(0.1 * len(dataset_full))
-        test_size = len(dataset_full) - train_size - val_size
-
-        self.train_set, self.val_set, self.test_set = torch.utils.data.random_split(dataset_full,
-                                                                                    [train_size, val_size, test_size])
-
-        self.train_set.dataset.transform = self.train_transform
+        self.train_set = PlantNetDataset(data_root=data_dir_test, classes_list=self.classes, image_size=self.image_size)
+        self.train_set.transform = self.train_transform
         self.train_loader = DataLoader(self.train_set, batch_size=self.batch_size, shuffle=True)
 
-        self.val_set.dataset.transform = self.val_transform
+        self.val_set = PlantNetDataset(data_root=data_dir_val, classes_list=self.classes, image_size=self.image_size)
+        self.val_set.transform = self.val_transform
         self.val_loader = DataLoader(self.val_set, batch_size=self.batch_size, shuffle=False)
 
-        self.test_set.dataset.transform = self.test_transform
+        self.test_set = PlantNetDataset(data_root=data_dir_test, classes_list=self.classes, image_size=self.image_size)
+        self.test_set.transform = self.test_transform
         self.test_loader = DataLoader(self.test_set, batch_size=self.batch_size, shuffle=False)
 
         # invert normalization for tensor to image transform
         self.inv_normalize = transforms.Compose([
-            transforms.Normalize(mean=0, std=[1./s for s in self.std]),
+            transforms.Normalize(mean=0, std=[1. / s for s in self.std]),
             transforms.Normalize(mean=[-m for m in self.mean], std=1.),
             lambda x: x * 255
         ])
@@ -107,20 +106,25 @@ class PlantNet:
 
 
 class PlantNetDataset(Dataset):
-    def __init__(self, data_root, classes_list, transform=None):
+    def __init__(self, data_root, classes_list, image_size=None, transform=None):
         self.data_root = data_root
 
         self.data = []
+
+        self.image_size = image_size
 
         self.transform = transform if transform is not None else transforms.ToTensor()
 
         for class_folder in os.listdir(self.data_root):
             class_path = os.path.join(self.data_root, class_folder)
 
+            # we are only interested in directories
+            if not os.path.isdir(class_path):
+                continue
+
             label_idx = classes_list.index(class_folder)
 
             for file in os.listdir(class_path):
-
                 file_path = os.path.join(class_path, file)
 
                 # one datasample is full filepath and index in classes_list
@@ -132,25 +136,42 @@ class PlantNetDataset(Dataset):
     def __getitem__(self, idx):
         img_path, label = self.data[idx]
 
-        img = self.pil_loader(img_path)
+        img = self.pil_loader(img_path, self.image_size)
         img = self.transform(img)
 
         return img, label
 
     @staticmethod
-    def pil_loader(path: str):
+    def pil_loader(path: str, size: int = None):
         # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
         with open(path, "rb") as f:
             img = Image.open(f)
+
+            # if size is given, we make the image a square image in the given size
+            if size:
+                # make non-square images square
+                if img.width != img.height:
+                    new_size = min(img.width, img.height)
+
+                    left = int((img.width - new_size) / 2)
+                    top = int((img.height - new_size) / 2)
+                    right = int((img.width + new_size) / 2)
+                    bottom = int((img.height + new_size) / 2)
+
+                    img = img.crop((left, top, right, bottom))
+
+                img = img.resize((size, size))
+
             return np.array(img)
 
 
 if __name__ == "__main__":
-    plantnet_dir = '/home/johannes-f/Documents/datasets/PlantNet_64'
+    plantnet_dir = 'D:\data'
 
     data = PlantNet(class_file_path='plantnet_300K_species_names.json',
                     data_dir=plantnet_dir,
-                    batch_size=16)
+                    batch_size=16,
+                    image_size=64)
 
     for ims, labels in data.train:
         print("images")
