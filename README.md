@@ -55,7 +55,7 @@ For the usage on the dataset specified in the data config (`configs/data_<>.yaml
 command line
 
 ```
-python3 train_vqvae.py --name run/e10 --epochs 10 --data-config config/data_jo.yaml
+python3 train_vqvae.py --name run/e10 --epochs 10 --data-config configs/data_jo.yaml
 ```
 
 To first debug the code with `CIFAR10` just run
@@ -77,6 +77,7 @@ options:
   --name NAME, -n NAME  Model name and folder where logs are stored
   --epochs N            Number of epochs to run (default: 2)
   --batch-size N        Mini-batch size (default: 64)
+  --image-size          Size that images should be resized to in preprocessing (default: 128)
   --lr LR               Initial learning rate (default: 0.0001)
   --config PATH         Path to model config file (default: configs/vqvae.yaml)
   --data-config PATH    Path to model config file (default: configs/data_jo.yaml)
