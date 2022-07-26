@@ -11,7 +11,12 @@ from torch.utils.data import DataLoader, Dataset
 
 
 class PlantNet:
-    def __init__(self, class_file_path: str, data_dir: str, batch_size: int = 16, image_size: int = None):
+    def __init__(self,
+                 class_file_path: str,
+                 data_dir: str,
+                 batch_size: int = 16,
+                 image_size: int = None,
+                 num_workers: int = 0):
         """
         Wrapper to load, preprocess and deprocess PlantNet300k dataset.
         Args:
@@ -55,15 +60,15 @@ class PlantNet:
 
         self.train_set = PlantNetDataset(data_root=data_dir_test, classes_list=self.classes, image_size=self.image_size)
         self.train_set.transform = self.train_transform
-        self.train_loader = DataLoader(self.train_set, batch_size=self.batch_size, shuffle=True)
+        self.train_loader = DataLoader(self.train_set, batch_size=self.batch_size, shuffle=True, num_workers=num_workers)
 
         self.val_set = PlantNetDataset(data_root=data_dir_val, classes_list=self.classes, image_size=self.image_size)
         self.val_set.transform = self.val_transform
-        self.val_loader = DataLoader(self.val_set, batch_size=self.batch_size, shuffle=False)
+        self.val_loader = DataLoader(self.val_set, batch_size=self.batch_size, shuffle=False, num_workers=num_workers)
 
         self.test_set = PlantNetDataset(data_root=data_dir_test, classes_list=self.classes, image_size=self.image_size)
         self.test_set.transform = self.test_transform
-        self.test_loader = DataLoader(self.test_set, batch_size=self.batch_size, shuffle=False)
+        self.test_loader = DataLoader(self.test_set, batch_size=self.batch_size, shuffle=False, num_workers=num_workers)
 
         # invert normalization for tensor to image transform
         self.inv_normalize = transforms.Compose([

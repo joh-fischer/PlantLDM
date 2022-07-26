@@ -34,6 +34,8 @@ parser.add_argument('--batch-size', default=64, metavar='N',
                     type=int, help='Mini-batch size (default: 64)')
 parser.add_argument('--image-size', default=128, metavar='N',
                     type=int, help='Size that images should be resized to before processing (default: 128)')
+parser.add_argument('--num-workers', default=0, metavar='N',
+                    type=int, help='Number of workers for the dataloader (default: 0)')
 parser.add_argument('--lr', default=0.0001,
                     type=float, metavar='LR', help='Initial learning rate (default: 0.0001)')
 parser.add_argument('--config', default='configs/vqvae.yaml',
@@ -86,7 +88,7 @@ def main():
         data = CIFAR10(args.batch_size)
     else:
         data_cfg = yaml.load(open(args.data_config, 'r'), Loader=yaml.Loader)
-        data = PlantNet(**data_cfg, batch_size=args.batch_size, image_size=args.image_size)
+        data = PlantNet(**data_cfg, batch_size=args.batch_size, image_size=args.image_size, num_workers=args.num_workers)
 
     # read config file for model
     cfg = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
