@@ -20,7 +20,7 @@ from dataloader import CIFAR10, PlantNet
 # from: https://stackoverflow.com/questions/20554074/sklearn-omp-error-15-initializing-libiomp5md-dll-but-found-mk2iomp5md-dll-a
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
-CHECKPOINT_DIR = 'checkpoints'
+CHECKPOINT_DIR = os.path.join(pathlib.Path(__file__).parent.resolve(), 'checkpoints')
 LOG_DIR = os.path.join(pathlib.Path(__file__).parent.resolve(), 'logs')
 TIMESTAMP = datetime.now().strftime('%y-%m-%d_%H%M%S')
 
