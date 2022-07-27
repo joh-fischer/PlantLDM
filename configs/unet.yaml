@@ -4,3 +4,11 @@ embedding_dim: 128
 max_len: 5000
 
 time_channels: 16
+
+# residual network
+n_groups: 32
+# time_channels
+
+# self attention
+d_k: 32   # dimension of queries, keys, values
+n_heads: 4  # number of heads for self-attention
