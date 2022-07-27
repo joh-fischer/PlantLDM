@@ -4,21 +4,21 @@ from model.unet.layers import Swish
 
 
 class TimeEmbedding(nn.Module):
-    def __init__(self, n_channels: int, embedding_dim: int, max_len: int = 5000):
+    def __init__(self, time_channels: int, embedding_dim: int, max_len: int = 5000):
         """
         Time embedding for time step t. First, t is embedded using a fixed sinusoidal positional
         embedding, as described in "Attention Is All You Need" (https://arxiv.org/abs/1706.03762),
         followed by a two layer MLP.
 
         Args:
-            n_channels: Dimension of final time embedding
+            time_channels: Dimension of final time embedding
             embedding_dim: Embedding dimension for the fixed sinusoidal positional embedding
             max_len: Maximum number of time steps (default: 5000)
         """
         super().__init__()
 
         self.embedding_dim = embedding_dim
-        self.n_channels = n_channels
+        self.n_channels = time_channels
         self.max_len = max_len
 
         # fixed sinusoidal positional embedding
