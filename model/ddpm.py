@@ -71,9 +71,14 @@ class DummyEpsModel(nn.Module):
             nn.Conv2d(64, n_channel, 3, padding=1),
         )
 
+        self.tanh = nn.Tanh()
+
     def forward(self, x, t) -> torch.Tensor:
         # Lets think about using t later. In the paper, they used Tr-like positional embeddings.
-        return self.conv(x)
+        x = self.conv(x)
+        # normalize to [-1, 1]
+        x = self.tanh(x)
+        return x
 
 
 class DDPM(nn.Module):
@@ -127,54 +132,3 @@ class DDPM(nn.Module):
             )
 
         return x_i
-
-
-def train(n_epoch: int = 100, device="cuda:0") -> None:
-    ddpm = DDPM(eps_model=DummyEpsModel(3), betas=(1e-4, 0.02), n_T=1000)
-    ddpm.to(device)
-
-    # TODO add this transform?
-    tf = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize((0.5,), (1.0))]
-    )
-
-    data_cfg = yaml.load(open(
-        "G:\Meine Ablage\Studium\Master\Semester 2\Computer Vision and Deep Learning\project\PlantLDM/configs/data_se.yaml",
-        'r'), Loader=yaml.Loader)
-
-    img_size = 32
-    dataset = PlantNet(**data_cfg, batch_size=128, image_size=img_size)
-
-    optim = torch.optim.Adam(ddpm.parameters(), lr=2e-4)
-
-    for i in range(n_epoch):
-        ddpm.train()
-
-        pbar = tqdm(dataset.train)
-        loss_ema = None
-        for x, _ in pbar:
-            optim.zero_grad()
-            x = x.to(device)
-            loss = ddpm(x)
-            loss.backward()
-            if loss_ema is None:
-                loss_ema = loss.item()
-            else:
-                loss_ema = 0.9 * loss_ema + 0.1 * loss.item()
-            pbar.set_description(f"loss: {loss_ema:.4f}")
-            optim.step()
-
-        ddpm.eval()
-        with torch.no_grad():
-            xh = ddpm.sample(16, (3, img_size, img_size), device)
-            grid = make_grid(xh, nrow=4)
-
-            path_img = os.path.join(pathlib.Path(__file__).parent.resolve(), 'contents')
-            save_image(grid, f"{path_img}/ddpm_sample_{i}.png")
-
-            # save model
-            torch.save(ddpm.state_dict(), f"{pathlib.Path(__file__).parent.resolve()}/ddpm_test.pth")
-
-
-if __name__ == "__main__":
-    train()
