@@ -5,6 +5,15 @@ from model.unet.layers.swish import Swish
 
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, time_channels: int, n_groups: int = 32):
+        """
+        Residual block with time conditioning.
+
+        Args:
+            in_channels: Input channels to residual block
+            out_channels: Output channels of residual block
+            time_channels: Dimension of time embedding
+            n_groups: Number of groups for group normalization
+        """
         super().__init__()
 
         self.block1 = nn.Sequential(
@@ -36,7 +45,6 @@ class ResidualBlock(nn.Module):
 
         x = self.block2(x)
 
-        # shortcut connection
         x += identity
 
         return x
