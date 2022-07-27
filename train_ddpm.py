@@ -94,7 +94,11 @@ def main():
     cfg = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
 
     u_net = DummyEpsModel(3)
-    ddpm = DDPM(eps_model=u_net, betas=(1e-4, 0.02), n_steps=1000)  # TODO make this an args variable
+    ddpm = DDPM(eps_model=u_net,
+                betas=(1e-4, 0.02),
+                img_channels=3,
+                img_size=(args.image_size, args.image_size),
+                n_steps=1000)  # TODO make this an args variable
     ddpm.to(device)
 
     optimizer = torch.optim.Adam(ddpm.parameters(), args.lr)
@@ -128,6 +132,8 @@ def main():
             if args.save_checkpoint:
                 save_model_checkpoint(ddpm, running_ckpt_dir, logger)
 
+    logger.global_train_step += 1
+
     elapsed_time = timer(t_start, time.time())
     print(f"Total training time: {elapsed_time}")
 
@@ -154,9 +160,6 @@ def train(model, train_loader, optimizer, device):
         if logger.global_train_step % 150 == 0:
             log2tensorboard_ddpm(logger, 'Train DDPM', ['ema_loss', 'loss'])
 
-        logger.global_train_step += 1
-
-
 @torch.no_grad()
 def validate(model, val_loader, device):
     model.eval()
@@ -165,7 +168,7 @@ def validate(model, val_loader, device):
     # TODO: improve this
     # TODO: make image size an argument
     n_images = 8
-    xh = model.sample(n_images, (3, 32, 32), device)
+    xh = model.sample(n_images, device)
     #grid = make_grid(xh, nrow=4)
 
     logger.tensorboard.add_figure('Val DDPM',
