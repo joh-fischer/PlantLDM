@@ -94,7 +94,7 @@ def main():
     cfg = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
 
     u_net = DummyEpsModel(3)
-    ddpm = DDPM(eps_model=u_net, betas=(1e-4, 0.02), n_T=1000)  # TODO make this an args variable
+    ddpm = DDPM(eps_model=u_net, betas=(1e-4, 0.02), n_steps=1000)  # TODO make this an args variable
     ddpm.to(device)
 
     optimizer = torch.optim.Adam(ddpm.parameters(), args.lr)
