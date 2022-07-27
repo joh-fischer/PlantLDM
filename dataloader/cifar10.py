@@ -35,14 +35,14 @@ class CIFAR10:
         # val size is 10000 in cifar10
         test_size = 50000 - train_size
 
-        self.train_set_full = torchvision.datasets.CIFAR10(root='G:\Meine Ablage\Studium\Master\Semester 2\Computer Vision and Deep Learning\project\PlantLDM/data', train=True, download=True,
+        self.train_set_full = torchvision.datasets.CIFAR10(root='./data', train=True, download=True,
                                                            transform=self.train_transform)
         # TODO: check if this way of splitting in train, val and test is correct
         self.train_set, self.test_set = torch.utils.data.random_split(self.train_set_full, [train_size, test_size])
 
         self.train_loader = torch.utils.data.DataLoader(self.train_set, batch_size=self.batch_size, shuffle=True)
 
-        self.val_set = torchvision.datasets.CIFAR10(root='G:\Meine Ablage\Studium\Master\Semester 2\Computer Vision and Deep Learning\project\PlantLDM/data', train=False, download=True,
+        self.val_set = torchvision.datasets.CIFAR10(root='./data', train=False, download=True,
                                                     transform=self.val_transform)
         self.val_loader = torch.utils.data.DataLoader(self.val_set, batch_size=self.batch_size, shuffle=False)
 
