@@ -11,10 +11,11 @@ from torchvision.utils import make_grid, save_image
 from tqdm import tqdm
 
 from dataloader import PlantNet, CIFAR10
-from model.ddpm import DDPM, DummyEpsModel
+from model.ddpm import DDPM
+from model.u_net import Unet
 from utils.helpers import timer, save_model_checkpoint, load_model_checkpoint, log2tensorboard_ddpm
 from utils.logger import Logger
-from utils.visualization import get_sample_images
+from utils.visualization import get_sample_images_for_ddpm
 
 # TODO: check if this is necessary
 # from: https://stackoverflow.com/questions/20554074/sklearn-omp-error-15-initializing-libiomp5md-dll-but-found-mk2iomp5md-dll-a
@@ -34,12 +35,14 @@ parser.add_argument('--batch-size', default=64, metavar='N',
                     type=int, help='Mini-batch size (default: 64)')
 parser.add_argument('--image-size', default=128, metavar='N',
                     type=int, help='Size that images should be resized to before processing (default: 128)')
+parser.add_argument('--image-channels', default=3, metavar='N',
+                    type=int, help='Number of image channels (default: 3)')
 parser.add_argument('--num-workers', default=0, metavar='N',
                     type=int, help='Number of workers for the dataloader (default: 0)')
 parser.add_argument('--lr', default=0.0002,
                     type=float, metavar='LR', help='Initial learning rate (default: 0.0002)')
-parser.add_argument('--config', default='configs/vqvae.yaml',
-                    metavar='PATH', help='Path to model config file (default: configs/vqvae.yaml)')
+parser.add_argument('--config', default='configs/ddpm.yaml',
+                    metavar='PATH', help='Path to model config file (default: configs/ddpm.yaml)')
 parser.add_argument('--data-config', default='configs/data_se.yaml',
                     metavar='PATH', help='Path to model config file (default: configs/data_se.yaml)')
 parser.add_argument('--debug', action='store_true',
@@ -93,15 +96,12 @@ def main():
     # read config file for model
     cfg = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
 
-    u_net = DummyEpsModel(3)
-    ddpm = DDPM(eps_model=u_net,
-                betas=(1e-4, 0.02),
-                img_channels=3,
-                img_size=(args.image_size, args.image_size),
-                n_steps=1000)  # TODO make this an args variable
+    unet = Unet(dim=args.image_size)
+    unet.to(device)
+    ddpm = DDPM(eps_model=unet, **cfg)
     ddpm.to(device)
 
-    optimizer = torch.optim.Adam(ddpm.parameters(), args.lr)
+    optimizer = torch.optim.Adam(unet.parameters(), args.lr)
 
     # resume training
     if args.load_checkpoint:
@@ -120,7 +120,7 @@ def main():
 
         train(ddpm, data.train, optimizer, device)
 
-        validate(ddpm, data.val, device)
+        validate(ddpm)
 
         # logging
         output = ' - '.join([f'{k}: {v.avg:.4f}' for k, v in logger.epoch.items()])
@@ -129,10 +129,10 @@ def main():
         # save logs and checkpoint
         if (epoch + 1) % args.save_interval == 0 or (epoch + 1) == args.epochs:
             logger.save()
-            if args.save_checkpoint:
-                save_model_checkpoint(ddpm, running_ckpt_dir, logger)
-
-    logger.global_train_step += 1
+            # TODO:
+            #if args.save_checkpoint:
+                # save_model_checkpoint(unet, f"{running_ckpt_dir}_unet", logger)
+                # save_model_checkpoint(ddpm, f"{running_ckpt_dir}_ddpm", logger)
 
     elapsed_time = timer(t_start, time.time())
     print(f"Total training time: {elapsed_time}")
@@ -145,7 +145,7 @@ def train(model, train_loader, optimizer, device):
     for x, _ in tqdm(train_loader, desc="Training"):
         optimizer.zero_grad()
         x = x.to(device)
-        loss = model(x)
+        loss = model.p_losses(x)
         loss.backward()
         optimizer.step()
 
@@ -160,19 +160,17 @@ def train(model, train_loader, optimizer, device):
         if logger.global_train_step % 150 == 0:
             log2tensorboard_ddpm(logger, 'Train DDPM', ['ema_loss', 'loss'])
 
+        logger.global_train_step += 1
+
 @torch.no_grad()
-def validate(model, val_loader, device):
+def validate(model):
     model.eval()
-    # TODO: implement
 
-    # TODO: improve this
-    # TODO: make image size an argument
     n_images = 8
-    xh = model.sample(n_images, device)
-    #grid = make_grid(xh, nrow=4)
+    images = model.sample(32, batch_size=n_images, channels=3)
 
-    logger.tensorboard.add_figure('Val DDPM',
-                                  get_sample_images(xh, n_ims=n_images),
+    logger.tensorboard.add_figure('Val: DDPM',
+                                  get_sample_images_for_ddpm(images, n_ims=n_images),
                                   global_step=logger.global_train_step)
 
     # save model

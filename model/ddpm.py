@@ -2,109 +2,155 @@ from typing import Dict, Tuple
 
 import torch
 import torch.nn as nn
-
-blk = lambda ic, oc: nn.Sequential(
-    nn.Conv2d(ic, oc, 7, padding=3),
-    nn.BatchNorm2d(oc),
-    nn.LeakyReLU(),
-)
-
-
-class DummyEpsModel(nn.Module):
-    """
-    This should be unet-like, but let's don't think about the model too much :P
-    Basically, any universal R^n -> R^n model should work.
-    """
-
-    def __init__(self, n_channel: int) -> None:
-        super(DummyEpsModel, self).__init__()
-        self.conv = nn.Sequential(  # with batchnorm
-            blk(n_channel, 64),
-            blk(64, 128),
-            blk(128, 256),
-            blk(256, 512),
-            blk(512, 256),
-            blk(256, 128),
-            blk(128, 64),
-            nn.Conv2d(64, n_channel, 3, padding=1),
-        )
-
-        self.tanh = nn.Tanh()
-
-    def forward(self, x, t) -> torch.Tensor:
-        # Lets think about using t later. In the paper, they used Tr-like positional embeddings.
-        x = self.conv(x)
-        # normalize to [-1, 1]
-        x = self.tanh(x)
-        return x
+import torch.nn.functional as F
+from tqdm import tqdm
 
 
 class DDPM(nn.Module):
     def __init__(
             self,
             eps_model: nn.Module,
-            betas: Tuple[float, float],
+            beta_1: float,
+            beta_2: float,
+            beta_schedule: str,
             n_steps: int,
-            img_channels: int = 3,
-            img_size: Tuple[int, int] = (128, 128),
-            criterion: nn.Module = nn.MSELoss(),
+            loss_function: str,
     ):
         super(DDPM, self).__init__()
-
-        assert betas[0] < betas[1] < 1.0, "beta1 < beta2 < 1.0 not fulfilled"
-
-        self.eps_model = eps_model
         self.n_steps = n_steps
-        self.img_channels = img_channels
-        self.img_size = img_size
-        self.criterion = criterion
+        self.eps_model = eps_model
 
-        # beta values
-        self.betas = betas
-        self.beta = self.linear_beta_schedule()
-        self.sqrt_beta = torch.sqrt(self.beta)
+        if not beta_1 < beta_2 < 1.0:
+            raise ValueError(f"beta1: {beta_1} < beta2: {beta_2} < 1.0 not fulfilled")
 
-        # alpha values
-        self.alpha = 1.0 - self.beta
-        self.log_alpha = torch.log(self.alpha)
-        self.oneover_sqrta = 1 / torch.sqrt(self.alpha)
-        self.alpha_bar = torch.cumprod(self.alpha, dim=0)
-        self.sqrtab = torch.sqrt(self.alpha_bar)
-        self.sqrtmab = torch.sqrt(1 - self.alpha_bar)
-        self.mab_over_sqrtmab_inv = (1 - self.alpha) / self.sqrtmab
+        available_beta_schedules = ["linear", "quadratic", "sigmoid", "cosine"]
+        if beta_schedule not in available_beta_schedules:
+            raise ValueError(f"Beta schedule should be one of the following: {available_beta_schedules}")
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        available_loss_functions = ["l1", "l2", "huber"]
+        if loss_function not in available_loss_functions:
+            raise ValueError(f"Loss function should be one of the following: {available_loss_functions}")
+        self.loss_function = loss_function
+
+        # define beta schedule
+        self.beta_1 = beta_1
+        self.beta_2 = beta_2
+        self.betas = None
+        if beta_schedule == "linear":
+            self.betas = self.linear_beta_schedule()
+        elif beta_schedule == "quadratic":
+            self.betas = self.quadratic_beta_schedule()
+        elif beta_schedule == "sigmoid":
+            self.betas = self.sigmoid_beta_schedule()
+        elif beta_schedule == "cosine":
+            self.betas = self.cosine_beta_schedule()
+
+        # define alphas
+        self.alphas = 1.0 - self.betas
+        self.alphas_cumprod = torch.cumprod(self.alphas, axis=0)
+        self.alphas_cumprod_prev = F.pad(self.alphas_cumprod[:-1], (1, 0), value=1.0)
+        self.sqrt_recip_alphas = torch.sqrt(1.0 / self.alphas)
+
+        # calculations for diffusion q(x_t | x_{t-1}) and others
+        self.sqrt_alphas_cumprod = torch.sqrt(self.alphas_cumprod)
+        self.sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - self.alphas_cumprod)
+
+        # calculations for posterior q(x_{t-1} | x_t, x_0)
+        self.posterior_variance = self.betas * (1.0 - self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
+
+    def extract(self, a, t, x_shape):
         """
-        Makes forward diffusion x_t, and tries to guess epsilon value from x_t using eps_model.
-        This implements Algorithm 1 in the paper.
+        extracts an appropriate t index for a batch of indices
         """
-        t = torch.randint(1, self.n_steps, (x.shape[0],)).to(x.device)  # t ~ Uniform({1, ..., T})
+        batch_size = t.shape[0]
+        out = a.gather(-1, t.cpu())
+        return out.reshape(batch_size, *((1,) * (len(x_shape) - 1))).to(t.device)
 
-        eps = torch.randn_like(x)  # epsilon ~ N(0, 1)
+    def q_sample(self, x_start, t, noise=None):
+        """
+        forward diffusion process
+        """
+        if noise is None:
+            noise = torch.randn_like(x_start)
 
-        # TODO: put all of the variables on the x device
-        x_t = (self.sqrtab.to(x.device)[t, None, None, None] * x
-               + self.sqrtmab.to(x.device)[t, None, None, None] * eps
-               )  # This is the x_t, which is sqrt(alphabar) x_0 + sqrt(1-alphabar) * eps
-        # We should predict the "error term" from this x_t. Loss is what we return.
+        sqrt_alphas_cumprod_t = self.extract(self.sqrt_alphas_cumprod, t, x_start.shape)
+        sqrt_one_minus_alphas_cumprod_t = self.extract(
+            self.sqrt_one_minus_alphas_cumprod, t, x_start.shape
+        )
 
-        return self.criterion(eps, self.eps_model(x_t, t / self.n_steps))
+        return sqrt_alphas_cumprod_t * x_start + sqrt_one_minus_alphas_cumprod_t * noise
+
+    def get_noisy_image(self, x_start, t):
+        """
+        Gets a noisy image for a certain timestep
+        """
+        # add noise
+        x_noisy = self.q_sample(x_start, t=t)
+
+        return x_noisy
+
+    def p_losses(self, x_start, noise=None):
+        if noise is None:
+            noise = torch.randn_like(x_start)
+
+        t = torch.randint(0, self.n_steps, (x_start.shape[0],)).to(x_start.device)  # t ~ Uniform({1, ..., T})
+
+        x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
+        predicted_noise = self.eps_model(x_noisy, t)
+
+        if self.loss_function == "l1":
+            loss = F.l1_loss(noise, predicted_noise)
+        elif self.loss_function == "l2":
+            loss = F.mse_loss(noise, predicted_noise)
+        elif self.loss_function == "huber":
+            loss = F.smooth_l1_loss(noise, predicted_noise)
+        else:
+            raise NotImplementedError()
+
+        return loss
 
     @torch.no_grad()
-    def sample(self, batch_size: int, device) -> torch.Tensor:
-        x = torch.randn(batch_size, self.img_channels, *self.img_size).to(device)  # x_T ~ N(0, 1)
+    def p_sample(self, x, t, t_index):
+        betas_t = self.extract(self.betas, t, x.shape)
+        sqrt_one_minus_alphas_cumprod_t = self.extract(
+            self.sqrt_one_minus_alphas_cumprod, t, x.shape
+        )
+        sqrt_recip_alphas_t = self.extract(self.sqrt_recip_alphas, t, x.shape)
 
-        # This samples accordingly to Algorithm 2. It is exactly the same logic.
-        for t in range(self.n_steps - 1, -1, -1):
-            z = torch.randn(batch_size, self.img_channels, *self.img_size).to(device) if t > 0 else 0
-            eps = self.eps_model(x, t / self.n_steps)
-            x = (
-                    self.oneover_sqrta[t]
-                    * (x - eps * self.mab_over_sqrtmab_inv[t])
-                    + self.sqrt_beta[t] * z
-            )
+        # Equation 11 in https://arxiv.org/abs/2006.11239
+        # Use our model (noise predictor) to predict the mean
+        model_mean = sqrt_recip_alphas_t * (
+                x - betas_t * self.eps_model(x, t) / sqrt_one_minus_alphas_cumprod_t
+        )
 
-        return x
+        if t_index == 0:
+            return model_mean
+        else:
+            posterior_variance_t = self.extract(self.posterior_variance, t, x.shape)
+            noise = torch.randn_like(x)
+            # Algorithm 2 line 4:
+            return model_mean + torch.sqrt(posterior_variance_t) * noise
+
+    @torch.no_grad()
+    def p_sample_loop(self, shape):
+        """
+        Implements Algorithm 2 of https://arxiv.org/abs/2006.11239
+        """
+        device = next(self.eps_model.parameters()).device
+
+        b = shape[0]
+        # start from pure noise (for each example in the batch)
+        img = torch.randn(shape, device=device)
+        imgs = []
+
+        for i in tqdm(reversed(range(0, self.n_steps)), desc='sampling loop time step', total=self.n_steps):
+            img = self.p_sample(img, torch.full((b,), i, device=device, dtype=torch.long), i)
+            imgs.append(img)
+        return imgs
+
+    @torch.no_grad()
+    def sample(self, image_size, batch_size=16, channels=3):
+        return self.p_sample_loop(shape=(batch_size, channels, image_size, image_size))
 
     def cosine_beta_schedule(self, s: float = 0.008):
         """
@@ -118,11 +164,11 @@ class DDPM(nn.Module):
         return torch.clip(beta_values, 0.0001, 0.9999)
 
     def linear_beta_schedule(self):
-        return torch.linspace(self.betas[0], self.betas[1], self.n_steps)
+        return torch.linspace(self.beta_1, self.beta_2, self.n_steps)
 
     def quadratic_beta_schedule(self):
-        return torch.linspace(self.betas[0] ** 0.5, self.betas[1] ** 0.5, self.n_steps) ** 2
+        return torch.linspace(self.beta_1 ** 0.5, self.beta_2 ** 0.5, self.n_steps) ** 2
 
     def sigmoid_beta_schedule(self):
         beta_values = torch.linspace(-6, 6, self.n_steps)
-        return torch.sigmoid(beta_values) * (self.betas[1] - self.betas[0]) + self.betas[0]
+        return torch.sigmoid(beta_values) * (self.beta_2 - self.beta_1) + self.beta_1
