@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from dataloader import PlantNet, CIFAR10
 from model.ddpm.ddpm import DDPM
-from model.u_net import Unet
+from model.unet import UNet
 from utils.helpers import timer, save_model_checkpoint, load_model_checkpoint, log2tensorboard_ddpm
 from utils.logger import Logger
 from utils.visualization import get_sample_images_for_ddpm
@@ -42,6 +42,8 @@ parser.add_argument('--lr', default=0.0002,
                     type=float, metavar='LR', help='Initial learning rate (default: 0.0002)')
 parser.add_argument('--config', default='configs/ddpm.yaml',
                     metavar='PATH', help='Path to model config file (default: configs/ddpm.yaml)')
+parser.add_argument('--unet-config', default='configs/unet.yaml',
+                    metavar='PATH', help='Path to unet model config file (default: configs/unet.yaml)')
 parser.add_argument('--data-config', default='configs/data_se.yaml',
                     metavar='PATH', help='Path to model config file (default: configs/data_se.yaml)')
 parser.add_argument('--debug', action='store_true',
@@ -52,8 +54,8 @@ parser.add_argument('--ckpt-save', default=True, action=argparse.BooleanOptional
                     dest='save_checkpoint', help='Save checkpoints to folder')
 parser.add_argument('--load-ckpt', default=None, metavar='PATH',
                     dest='load_checkpoint', help='Load model checkpoint and continue training')
-parser.add_argument('--log-save-interval', default=1, type=int, metavar='N',
-                    dest='save_interval', help="Interval in which logs are saved to disk (default: 5)")  #TODO change back to 5
+parser.add_argument('--log-save-interval', default=5, type=int, metavar='N',
+                    dest='save_interval', help="Interval in which logs are saved to disk (default: 5)")
 
 logger = Logger(LOG_DIR)
 
@@ -99,8 +101,10 @@ def main():
 
     # read config file for model
     cfg = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
+    cfg_unet = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
 
-    unet = Unet(dim=args.image_size)
+    # TODO: get unet parameters via cfg_unet
+    unet = UNet(3, 128, 64, channels=[32, 64, 128, 256])
     unet.to(device)
     ddpm = DDPM(eps_model=unet, **cfg)
     ddpm.to(device)
