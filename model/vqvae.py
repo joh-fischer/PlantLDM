@@ -20,11 +20,23 @@ class VQVAE(nn.Module):
     def forward(self, x):
         z_e = self.encoder(x)
 
-        z_q, loss = self.vq(z_e)
+        z_q = self.vq(z_e)
 
         x_hat = self.decoder(z_q)
 
-        return x_hat, loss
+        return x_hat, z_e, z_q
+
+    def encode(self, x):
+        z_e = self.encoder(x)
+        z_q = self.vq(z_e)
+
+        return z_q
+
+    def decode(self, z_e):
+        z_q = self.vq(z_e)
+        x_hat = self.decoder(z_q)
+
+        return x_hat
 
 
 if __name__ == "__main__":
@@ -33,8 +45,9 @@ if __name__ == "__main__":
     ipt = torch.randn((16, 3, 128, 128))
 
     vqvae = VQVAE(3, 10)
-    rec, out_loss = vqvae(ipt)
+    rec, e, q = vqvae(ipt)
 
     print("Input shape:", ipt.shape)    # [bs, 3, 128, 128]
     print("rec shape:", rec.shape)      # [bs, 3, 128, 128]
-    print("Loss:", out_loss)            # [bs, 10, 32, 32]
+    print("encoded:", e.shape)
+    print("quantized:", q.shape)
