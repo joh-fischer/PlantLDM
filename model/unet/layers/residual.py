@@ -1,31 +1,30 @@
 import torch
 import torch.nn as nn
-from model.unet.layers.swish import Swish
 
 
 class ResidualBlock(nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, time_channels: int, n_groups: int = 32):
+    def __init__(self, in_channels: int, out_channels: int, time_emb_dim: int = None, n_groups: int = 8):
         """
         Residual block with time conditioning.
 
         Args:
             in_channels: Input channels to residual block
             out_channels: Output channels of residual block
-            time_channels: Dimension of time embedding
+            time_emb_dim: Dimension of time embedding
             n_groups: Number of groups for group normalization
         """
         super().__init__()
 
         self.block1 = nn.Sequential(
-            nn.GroupNorm(n_groups, in_channels),
-            Swish(beta=1.0),
-            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
+            nn.GroupNorm(n_groups, out_channels),
+            nn.SiLU()
         )
 
         self.block2 = nn.Sequential(
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
             nn.GroupNorm(n_groups, out_channels),
-            Swish(beta=1.0),
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
+            nn.SiLU()
         )
 
         if in_channels != out_channels:
@@ -33,28 +32,28 @@ class ResidualBlock(nn.Module):
         else:
             self.shortcut = nn.Identity()
 
-        self.time_emb = nn.Linear(time_channels, out_channels)
+        self.time_emb = nn.Linear(time_emb_dim, out_channels) if time_emb_dim is not None else None
 
     def forward(self, x: torch.Tensor, t: torch.Tensor):
         identity = self.shortcut(x)
+
         x = self.block1(x)
 
         # condition with time
-        t = self.time_emb(t)    # [bs, out_channels]
-        x += t[:, :, None, None]
+        if self.time_emb is not None:
+            t = self.time_emb(t)        # [bs, out_channels]
+            x += t[:, :, None, None]
 
         x = self.block2(x)
 
-        x += identity
-
-        return x
+        return x + identity
 
 
 if __name__ == "__main__":
     bs = 8
-    t_channels = 32
+    t_channels = 16
 
-    ipt = torch.randn((bs, 64, 256, 256))
+    ipt = torch.randn((bs, 64, 32, 32))
     time = torch.randn((bs, t_channels))
 
     res = ResidualBlock(64, 128, t_channels)
