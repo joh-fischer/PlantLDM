@@ -4,20 +4,20 @@ from einops import rearrange
 
 
 class Attention(nn.Module):
-    def __init__(self, n_channels: int, d_k: int = 32, n_heads: int = 2):
+    def __init__(self, n_channels: int, dim_keys: int = 32, n_heads: int = 2):
         """
         Applies self-attention like in "Attention Is All You Need" (https://arxiv.org/abs/1706.03762)
         to an image by reshaping it into a sequence. Only for small field sizes.
 
         Args:
             n_channels (int): Number of channels of the input feature maps
-            d_k (int): Dimension of queries, keys, and values
+            dim_keys (int): Dimension of queries, keys, and values
             n_heads (int): Number of heads for attention
         """
         super().__init__()
-        self.scale = d_k ** -0.5
+        self.scale = dim_keys ** -0.5
         self.heads = n_heads
-        hidden_dim = d_k * n_heads
+        hidden_dim = dim_keys * n_heads
         self.to_qkv = nn.Conv2d(n_channels, hidden_dim * 3, 1, bias=False)
         self.to_out = nn.Conv2d(hidden_dim, n_channels, 1)
 
@@ -40,7 +40,7 @@ class Attention(nn.Module):
 
 
 class LinearAttention(nn.Module):
-    def __init__(self, n_channels: int, d_k: int = 32, n_heads: int = 2):
+    def __init__(self, n_channels: int, dim_keys: int = 32, n_heads: int = 2):
         """
         Efficient Attention (https://arxiv.org/abs/1812.01243), which instead of
         computing V (Q K.T) like in dot-product attention, computes Q (K.T V).
@@ -48,13 +48,13 @@ class LinearAttention(nn.Module):
 
         Args:
             n_channels (int): Number of channels of the input feature maps
-            d_k (int): Dimension of queries, keys, and values
+            dim_keys (int): Dimension of queries, keys, and values
             n_heads (int): Number of heads for attention
         """
         super().__init__()
-        self.scale = d_k ** -0.5
+        self.scale = dim_keys ** -0.5
         self.n_heads = n_heads
-        hidden_dim = d_k * n_heads
+        hidden_dim = dim_keys * n_heads
         self.to_qkv = nn.Conv2d(n_channels, hidden_dim * 3, 1, bias=False)
 
         self.to_out = nn.Sequential(nn.Conv2d(hidden_dim, n_channels, 1),
@@ -82,13 +82,13 @@ class LinearAttention(nn.Module):
 if __name__ == "__main__":
     ipt = torch.randn((4, 1024, 8, 8))
 
-    attn = Attention(1024, d_k=32, n_heads=2)
+    attn = Attention(1024, dim_keys=32, n_heads=2)
     out = attn(ipt)
     print("Attention")
     print("\tInput:", ipt.shape)
     print("\tOutput:", out.shape)
 
-    lin_attn = LinearAttention(1024, d_k=32, n_heads=2)
+    lin_attn = LinearAttention(1024, dim_keys=32, n_heads=2)
     out = lin_attn(ipt)
     print("Linear Attention")
     print("\tInput:", ipt.shape)
