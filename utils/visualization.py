@@ -109,40 +109,42 @@ def get_original_reconstruction_figure(x: torch.Tensor, x_hat: torch.Tensor, n_i
 
     return fig
 
-def get_sample_images(x_hat: torch.Tensor, n_ims: int = 8, fig_size: tuple = (14, 4), dpi: int = 150):
+def get_sample_images(images: list(), n_ims: int = 8, fig_size: tuple = (14, 4), dpi: int = 150):
     """
     Returns figure of original and reconstruction images. Top row are originals, bottom
     row are reconstructions. Slower but larger images.
 
     Args:
-        x: Original image tensor
-        x_hat: Reconstructed image tensor
-        n_ims: Number of images of that batch to be plotted
+        images: List of sampled images
+        n_ims: Number of images that should be plotted
         fig_size: Size of the figure
         dpi: Resolution
 
     Returns:
         fig: Matplotlib figure
     """
-    bs, c, h, w = x_hat.shape
+    bs, c, h, w = images[0].shape
+
+    n_cols = 10
+    col_idxs = np.linspace(0, len(images) - 1, n_cols, dtype=int)
 
     n_ims = n_ims if n_ims <= bs else bs
     cmap = None if c > 1 else 'gray'
 
-    fig, axes = plt.subplots(nrows=1, ncols=n_ims, figsize=fig_size,
+    fig, axes = plt.subplots(nrows=n_ims, ncols=n_cols, figsize=fig_size,
                              dpi=dpi, tight_layout=True, squeeze=True,
                              gridspec_kw={'wspace': 0, 'hspace': 0})
 
-    for im_idx in range(n_ims):
-        # original
-        im = tensor_to_image(x_hat[im_idx])
+    for im_idx in range(n_cols):
+        for row_idx in range(n_ims):
+            im = tensor_to_image(images[col_idxs[im_idx]][row_idx])
 
-        ax = axes[im_idx]
-        ax.imshow(im, cmap=cmap)
-        ax.get_xaxis().set_ticks([])
-        ax.get_yaxis().set_ticks([])
-        if im_idx == 0:
-            ax.set_ylabel("Images")
+            ax = axes[row_idx, im_idx]
+            ax.imshow(im, cmap=cmap)
+            ax.get_xaxis().set_ticks([])
+            ax.get_yaxis().set_ticks([])
+            #if im_idx == 0:
+            #    ax.set_ylabel("Images")
 
     return fig
 
