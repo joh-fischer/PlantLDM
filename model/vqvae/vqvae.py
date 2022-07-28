@@ -1,8 +1,8 @@
 import torch.nn as nn
 
-from model.layers.encoder import Encoder
-from model.layers.decoder import Decoder
-from model.layers.quantizer import VectorQuantizer
+from model.vqvae.layers import Encoder
+from model.vqvae.layers.decoder import Decoder
+from model.vqvae.layers.quantizer import VectorQuantizer
 
 
 class VQVAE(nn.Module):
