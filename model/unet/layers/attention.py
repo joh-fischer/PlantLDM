@@ -3,32 +3,44 @@ import torch.nn as nn
 from einops import rearrange
 
 
-class SelfAttention(nn.Module):
-    def __init__(self, d_k: int, n_heads: int = 2):
+class Attention(nn.Module):
+    def __init__(self, n_channels: int, d_k: int = 32, n_heads: int = 2):
         """
         Applies self-attention like in "Attention Is All You Need" (https://arxiv.org/abs/1706.03762)
         to an image by reshaping it into a sequence. Only for small field sizes.
 
         Args:
+            n_channels (int): Number of channels of the input feature maps
             d_k (int): Dimension of queries, keys, and values
-            n_heads: Number of heads for multi-head self attention
+            n_heads (int): Number of heads for attention
         """
         super().__init__()
-        self.self_attention = nn.MultiheadAttention(d_k, n_heads)
+        self.scale = d_k ** -0.5
+        self.heads = n_heads
+        hidden_dim = d_k * n_heads
+        self.to_qkv = nn.Conv2d(n_channels, hidden_dim * 3, 1, bias=False)
+        self.to_out = nn.Conv2d(hidden_dim, n_channels, 1)
 
-    def forward(self, x: torch.Tensor):
-        bs, n_channels, height, width = x.shape
-        x = x.view(bs, n_channels, -1).permute(0, 2, 1)
+    def forward(self, x):
+        b, c, h, w = x.shape
+        qkv = self.to_qkv(x).chunk(3, dim=1)
+        q, k, v = map(
+            lambda t: rearrange(t, "b (h c) x y -> b h c (x y)", h=self.heads), qkv
+        )
+        q = q * self.scale
 
-        x, _ = self.self_attention(x, x, x)
+        sim = torch.einsum("b h d i, b h d j -> b h i j", q, k)
+        sim = sim - sim.amax(dim=-1, keepdim=True).detach()
+        attention = sim.softmax(dim=-1)
 
-        x = x.permute(0, 2, 1).view(bs, n_channels, height, width)
+        res = torch.einsum("b h i j, b h d j -> b h i d", attention, v)
+        res = rearrange(res, "b h (x y) d -> b (h d) x y", x=h, y=w)
 
-        return x
+        return self.to_out(res)
 
 
 class LinearAttention(nn.Module):
-    def __init__(self, n_channels, n_heads: int = 4, d_k: int = 32):
+    def __init__(self, n_channels: int, d_k: int = 32, n_heads: int = 2):
         """
         Efficient Attention (https://arxiv.org/abs/1812.01243), which instead of
         computing V (Q K.T) like in dot-product attention, computes Q (K.T V).
@@ -36,8 +48,8 @@ class LinearAttention(nn.Module):
 
         Args:
             n_channels (int): Number of channels of the input feature maps
-            n_heads (int): Number of heads for attention
             d_k (int): Dimension of queries, keys, and values
+            n_heads (int): Number of heads for attention
         """
         super().__init__()
         self.scale = d_k ** -0.5
@@ -48,7 +60,7 @@ class LinearAttention(nn.Module):
         self.to_out = nn.Sequential(nn.Conv2d(hidden_dim, n_channels, 1),
                                     nn.GroupNorm(1, n_channels))
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         b, c, h, w = x.shape
         qkv = self.to_qkv(x).chunk(3, dim=1)
         q, k, v = map(
@@ -68,15 +80,15 @@ class LinearAttention(nn.Module):
 
 
 if __name__ == "__main__":
-    ipt = torch.randn((4, 32, 16, 16))
+    ipt = torch.randn((4, 1024, 8, 8))
 
-    self_attn = SelfAttention(d_k=32, n_heads=2)
-    out = self_attn(ipt)
-    print("Self Attention")
+    attn = Attention(1024, d_k=32, n_heads=2)
+    out = attn(ipt)
+    print("Attention")
     print("\tInput:", ipt.shape)
     print("\tOutput:", out.shape)
 
-    lin_attn = LinearAttention(32, n_heads=2, d_k=32)
+    lin_attn = LinearAttention(1024, d_k=32, n_heads=2)
     out = lin_attn(ipt)
     print("Linear Attention")
     print("\tInput:", ipt.shape)
