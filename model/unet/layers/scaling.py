@@ -37,4 +37,3 @@ if __name__ == "__main__":
     us = UpSample(32)
     out = us(out)
     print("Upsampled:", out.shape)
-    
