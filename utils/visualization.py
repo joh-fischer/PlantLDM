@@ -109,7 +109,7 @@ def get_original_reconstruction_figure(x: torch.Tensor, x_hat: torch.Tensor, n_i
 
     return fig
 
-def get_sample_images(images: list(), n_ims: int = 8, fig_size: tuple = (14, 4), dpi: int = 150):
+def get_sample_images_for_ddpm(images: list(), n_ims: int = 8, fig_size: tuple = (14, 4), dpi: int = 150):
     """
     Returns figure of original and reconstruction images. Top row are originals, bottom
     row are reconstructions. Slower but larger images.
@@ -143,8 +143,6 @@ def get_sample_images(images: list(), n_ims: int = 8, fig_size: tuple = (14, 4),
             ax.imshow(im, cmap=cmap)
             ax.get_xaxis().set_ticks([])
             ax.get_yaxis().set_ticks([])
-            #if im_idx == 0:
-            #    ax.set_ylabel("Images")
 
     return fig
 

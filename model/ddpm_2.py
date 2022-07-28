@@ -10,21 +10,40 @@ class DDPM(nn.Module):
     def __init__(
             self,
             eps_model: nn.Module,
-            betas: Tuple[float, float],
+            beta_1: float,
+            beta_2: float,
+            beta_schedule: str,
             n_steps: int,
-            img_channels: int = 3,
-            img_size: Tuple[int, int] = (128, 128),
-            criterion: nn.Module = nn.MSELoss(),
+            loss_function: str,
     ):
         super(DDPM, self).__init__()
         self.n_steps = n_steps
         self.eps_model = eps_model
 
-        assert betas[0] < betas[1] < 1.0, "beta1 < beta2 < 1.0 not fulfilled"
+        if beta_1 < beta_2 < 1.0:
+            raise ValueError(f"beta1: {beta_1} < beta2: {beta_2} < 1.0 not fulfilled")
+
+        available_beta_schedules = ["linear", "quadratic", "sigmoid", "cosine"]
+        if beta_schedule not in available_beta_schedules:
+            raise ValueError(f"Beta schedule should be one of the following: {available_beta_schedules}")
+
+        available_loss_functions = ["l1", "l2", "huber"]
+        if loss_function not in available_loss_functions:
+            raise ValueError(f"Loss function should be one of the following: {available_loss_functions}")
+        self.loss_function = loss_function
 
         # define beta schedule
-        self.beta = betas
-        self.betas = self.linear_beta_schedule()
+        self.beta_1 = beta_1
+        self.beta_2 = beta_2
+        self.betas = None
+        if beta_schedule == "linear":
+            self.betas = self.linear_beta_schedule()
+        elif beta_schedule == "quadratic":
+            self.betas = self.quadratic_beta_schedule()
+        elif beta_schedule == "sigmoid":
+            self.betas = self.sigmoid_beta_schedule()
+        elif beta_schedule == "cosine":
+            self.betas = self.cosine_beta_schedule()
 
         # define alphas
         self.alphas = 1.0 - self.betas
@@ -44,7 +63,7 @@ class DDPM(nn.Module):
         extracts an appropriate t index for a batch of indices
         """
         batch_size = t.shape[0]
-        out = a.gather(-1, t.cpu())  # TODO maybe not on CPU?
+        out = a.gather(-1, t.cpu())
         return out.reshape(batch_size, *((1,) * (len(x_shape) - 1))).to(t.device)
 
     def q_sample(self, x_start, t, noise=None):
@@ -70,7 +89,7 @@ class DDPM(nn.Module):
 
         return x_noisy
 
-    def p_losses(self, x_start, noise=None, loss_type="l1"):
+    def p_losses(self, x_start, noise=None):
         if noise is None:
             noise = torch.randn_like(x_start)
 
@@ -79,11 +98,11 @@ class DDPM(nn.Module):
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
         predicted_noise = self.eps_model(x_noisy, t)
 
-        if loss_type == "l1":
+        if self.loss_function == "l1":
             loss = F.l1_loss(noise, predicted_noise)
-        elif loss_type == "l2":
+        elif self.loss_function == "l2":
             loss = F.mse_loss(noise, predicted_noise)
-        elif loss_type == "huber":
+        elif self.loss_function == "huber":
             loss = F.smooth_l1_loss(noise, predicted_noise)
         else:
             raise NotImplementedError()
@@ -98,7 +117,7 @@ class DDPM(nn.Module):
         )
         sqrt_recip_alphas_t = self.extract(self.sqrt_recip_alphas, t, x.shape)
 
-        # Equation 11 in the paper
+        # Equation 11 in https://arxiv.org/abs/2006.11239
         # Use our model (noise predictor) to predict the mean
         model_mean = sqrt_recip_alphas_t * (
                 x - betas_t * self.eps_model(x, t) / sqrt_one_minus_alphas_cumprod_t
@@ -112,9 +131,11 @@ class DDPM(nn.Module):
             # Algorithm 2 line 4:
             return model_mean + torch.sqrt(posterior_variance_t) * noise
 
-    # Algorithm 2 (including returning all images)
     @torch.no_grad()
     def p_sample_loop(self, shape):
+        """
+        Implements Algorithm 2 of https://arxiv.org/abs/2006.11239
+        """
         device = next(self.eps_model.parameters()).device
 
         b = shape[0]
@@ -131,38 +152,6 @@ class DDPM(nn.Module):
     def sample(self, image_size, batch_size=16, channels=3):
         return self.p_sample_loop(shape=(batch_size, channels, image_size, image_size))
 
-    # def forward(self, x: torch.Tensor) -> torch.Tensor:
-    #     """
-    #     Makes forward diffusion x_t, and tries to guess epsilon value from x_t using eps_model.
-    #     This implements Algorithm 1 in the paper.
-    #     """
-    #     t = torch.randint(1, self.n_steps, (x.shape[0],)).to(x.device)  # t ~ Uniform({1, ..., T})
-    #
-    #     eps = torch.randn_like(x)  # epsilon ~ N(0, 1)
-    #
-    #     x_t = (self.sqrtab[t, None, None, None] * x
-    #            + self.sqrtmab[t, None, None, None] * eps
-    #            )  # This is the x_t, which is sqrt(alphabar) x_0 + sqrt(1-alphabar) * eps
-    #     # We should predict the "error term" from this x_t. Loss is what we return.
-    #
-    #     return self.criterion(eps, self.eps_model(x_t, t / self.n_steps))
-    #
-    # @torch.no_grad()
-    # def sample(self, batch_size: int, device) -> torch.Tensor:
-    #     x = torch.randn(batch_size, self.img_channels, *self.img_size).to(device)  # x_T ~ N(0, 1)
-    #
-    #     # This samples accordingly to Algorithm 2. It is exactly the same logic.
-    #     for t in range(self.n_steps, 0, -1):
-    #         z = torch.randn(batch_size, self.img_channels, *self.img_size).to(device) if t > 1 else 0
-    #         eps = self.eps_model(x, t / self.n_steps)
-    #         x = (
-    #                 self.oneover_sqrta[t]
-    #                 * (x - eps * self.mab_over_sqrtmab[t])
-    #                 + self.sqrt_beta_t[t] * z
-    #         )
-    #
-    #     return x
-
     def cosine_beta_schedule(self, s: float = 0.008):
         """
         cosine schedule as proposed in https://arxiv.org/abs/2102.09672
@@ -175,11 +164,11 @@ class DDPM(nn.Module):
         return torch.clip(beta_values, 0.0001, 0.9999)
 
     def linear_beta_schedule(self):
-        return torch.linspace(self.beta[0], self.beta[1], self.n_steps)
+        return torch.linspace(self.beta_1, self.beta_2, self.n_steps)
 
     def quadratic_beta_schedule(self):
-        return torch.linspace(self.beta[0] ** 0.5, self.beta[1] ** 0.5, self.n_steps) ** 2
+        return torch.linspace(self.beta_1 ** 0.5, self.beta_2 ** 0.5, self.n_steps) ** 2
 
     def sigmoid_beta_schedule(self):
         beta_values = torch.linspace(-6, 6, self.n_steps)
-        return torch.sigmoid(beta_values) * (self.beta[1] - self.beta[0]) + self.beta[0]
+        return torch.sigmoid(beta_values) * (self.beta_2 - self.beta_1) + self.beta_1
