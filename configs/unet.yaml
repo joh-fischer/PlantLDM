@@ -1,0 +1,20 @@
+in_channels: 3
+
+# time embedding
+pos_emb_dim: 64     # embedding dimension for the fixed sinusoidal positional embedding
+time_emb_dim: 128
+max_len: 5000       # maximum number of time steps for the positional embedding
+
+# residual network
+n_groups: 8         # group normalization
+
+# attention
+dim_keys: 64   # dimension of queries, keys, values
+n_heads: 4  # number of heads for self-attention
+
+# UNet
+channels:
+  - 32
+  - 64
+  - 128
+  - 256
