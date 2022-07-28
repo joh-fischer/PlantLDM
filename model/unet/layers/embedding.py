@@ -36,8 +36,6 @@ class TimeEmbedding(nn.Module):
             nn.Linear(self.time_emb_dim, self.time_emb_dim)
         )
 
-        print(self.pos_embedding.device)
-
     def forward(self, t: torch.Tensor):
         """
         Embeds a time step t with a fixed sinusoidal positional encoding, and then
