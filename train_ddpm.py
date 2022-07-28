@@ -6,12 +6,11 @@ from datetime import datetime
 
 import torch
 import yaml
-import matplotlib.pyplot as plt
-from torchvision.utils import make_grid, save_image
+
 from tqdm import tqdm
 
 from dataloader import PlantNet, CIFAR10
-from model.ddpm import DDPM
+from model.ddpm.ddpm import DDPM
 from model.u_net import Unet
 from utils.helpers import timer, save_model_checkpoint, load_model_checkpoint, log2tensorboard_ddpm
 from utils.logger import Logger
@@ -53,8 +52,8 @@ parser.add_argument('--ckpt-save', default=True, action=argparse.BooleanOptional
                     dest='save_checkpoint', help='Save checkpoints to folder')
 parser.add_argument('--load-ckpt', default=None, metavar='PATH',
                     dest='load_checkpoint', help='Load model checkpoint and continue training')
-parser.add_argument('--log-save-interval', default=5, type=int, metavar='N',
-                    dest='save_interval', help="Interval in which logs are saved to disk (default: 5)")
+parser.add_argument('--log-save-interval', default=1, type=int, metavar='N',
+                    dest='save_interval', help="Interval in which logs are saved to disk (default: 5)")  #TODO change back to 5
 
 logger = Logger(LOG_DIR)
 
@@ -67,12 +66,17 @@ def main():
     # setup paths and logging
     args.name = 'second_stage/' + args.name
     running_log_dir = os.path.join(LOG_DIR, args.name, f'{TIMESTAMP}')
-    running_ckpt_dir = os.path.join(CHECKPOINT_DIR, args.name, f'{TIMESTAMP}')
+    running_ckpt_dir_ddpm = os.path.join(CHECKPOINT_DIR, args.name, f'{TIMESTAMP}', "ddpm")
+    running_ckpt_dir_unet = os.path.join(CHECKPOINT_DIR, args.name, f'{TIMESTAMP}', "unet")
     print("{:<16}: {}".format('logdir', running_log_dir))
-    print("{:<16}: {}".format('ckpt_dir', running_ckpt_dir))
+    print("{:<16}: {}".format('ckpt_dir_ddpm', running_ckpt_dir_ddpm))
+    print("{:<16}: {}".format('ckpt_dir_unet', running_ckpt_dir_unet))
 
-    if args.save_checkpoint and not os.path.exists(running_ckpt_dir):
-        os.makedirs(running_ckpt_dir)
+    if args.save_checkpoint and not os.path.exists(running_ckpt_dir_ddpm):
+        os.makedirs(running_ckpt_dir_ddpm)
+
+    if args.save_checkpoint and not os.path.exists(running_ckpt_dir_unet):
+        os.makedirs(running_ckpt_dir_unet)
 
     global logger
     logger = Logger(running_log_dir, tensorboard=True)
@@ -129,10 +133,9 @@ def main():
         # save logs and checkpoint
         if (epoch + 1) % args.save_interval == 0 or (epoch + 1) == args.epochs:
             logger.save()
-            # TODO:
-            #if args.save_checkpoint:
-                # save_model_checkpoint(unet, f"{running_ckpt_dir}_unet", logger)
-                # save_model_checkpoint(ddpm, f"{running_ckpt_dir}_ddpm", logger)
+            if args.save_checkpoint:
+                save_model_checkpoint(unet, f"{running_ckpt_dir_ddpm}", logger)
+                save_model_checkpoint(ddpm, f"{running_ckpt_dir_unet}", logger)
 
     elapsed_time = timer(t_start, time.time())
     print(f"Total training time: {elapsed_time}")
