@@ -168,4 +168,4 @@ if __name__ == "__main__":
     # ckpt = get_ckpt_path(name, "taming/modules/autoencoder/lpips")
     # https://heibox.uni-heidelberg.de/f/607503859c864bc1b30b/?dl=1
     # just downloads vgg.pth
-    ckpt = get_ckpt_path("vgg_lpips", "")
+    # ckpt = get_ckpt_path("vgg_lpips", "")
