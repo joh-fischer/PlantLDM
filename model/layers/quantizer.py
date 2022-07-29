@@ -7,6 +7,7 @@ class VectorQuantizer(nn.Module):
         """
         Vector quantizer that discretizes the continuous latent z. Adapted from
         https://github.com/MishaLaskin/vqvae/blob/master/models/quantizer.py.
+
         Args:
             n_embeddings (int): Codebook size
             embedding_dim (int): Dimension of the latent z (channels)
@@ -26,9 +27,12 @@ class VectorQuantizer(nn.Module):
         Maps the output of the encoder network z (continuous) to a discrete one-hot
         vector z_q, where the index indicates the closest embedding vector e_j. The
         latent z is detached as first step to allow straight through backprop.
+
         Args:
             z: Output of the encoder network, shape [bs, latent_dim, h, w]
         Returns:
+            z_q: Quantized z
+            loss: 
         """
         # flatten input from [bs, c, h, w] to [bs*h*w, c]
         z = z.permute(0, 2, 3, 1).contiguous()

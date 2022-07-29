@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from model.vqvae.layers.encoder import Encoder
 from model.vqvae.layers.decoder import Decoder
-from model.vqvae.layers.quantizer import VectorQuantizer
+from model.layers.quantizer import VectorQuantizer
 
 
 class VQVAE(nn.Module):

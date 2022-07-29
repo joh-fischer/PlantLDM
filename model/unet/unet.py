@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 
-from model.unet.layers.scaling import UpSample, DownSample
-from model.unet.layers.attention import LinearAttention, Attention
-from model.unet.layers.embedding import TimeEmbedding
-from model.unet.layers.residual import ResidualBlock
+from model.layers.scaling import UpSample, DownSample
+from model.layers.attention import LinearAttention, Attention
+from model.layers.embedding import TimeEmbedding
+from model.layers.residual import ResidualBlock
 
 
 class UNet(nn.Module):
