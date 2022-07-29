@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from model.vqvae.layers import Encoder
+from model.vqvae.layers.encoder import Encoder
 from model.vqvae.layers.decoder import Decoder
 from model.vqvae.layers.quantizer import VectorQuantizer
 
@@ -20,34 +20,20 @@ class VQVAE(nn.Module):
     def forward(self, x):
         z_e = self.encoder(x)
 
-        z_q = self.vq(z_e)
+        z_q, loss = self.vq(z_e)
 
         x_hat = self.decoder(z_q)
 
-        return x_hat, z_e, z_q
-
-    def encode(self, x):
-        z_e = self.encoder(x)
-        z_q = self.vq(z_e)
-
-        return z_q
-
-    def decode(self, z_e):
-        z_q = self.vq(z_e)
-        x_hat = self.decoder(z_q)
-
-        return x_hat
+        return x_hat, loss
 
 
 if __name__ == "__main__":
     import torch
 
     ipt = torch.randn((16, 3, 128, 128))
-
     vqvae = VQVAE(3, 10)
-    rec, e, q = vqvae(ipt)
+    rec, out_loss = vqvae(ipt)
 
     print("Input shape:", ipt.shape)    # [bs, 3, 128, 128]
     print("rec shape:", rec.shape)      # [bs, 3, 128, 128]
-    print("encoded:", e.shape)
-    print("quantized:", q.shape)
+    print("Loss:", out_loss)
