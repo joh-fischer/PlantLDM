@@ -88,7 +88,8 @@ def main():
         data = CIFAR10(args.batch_size)
     else:
         data_cfg = yaml.load(open(args.data_config, 'r'), Loader=yaml.Loader)
-        data = PlantNet(**data_cfg, batch_size=args.batch_size, image_size=args.image_size, num_workers=args.num_workers)
+        data = PlantNet(**data_cfg, batch_size=args.batch_size,
+                        image_size=args.image_size, num_workers=args.num_workers)
 
     # read config file for model
     cfg = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)

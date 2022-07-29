@@ -12,25 +12,25 @@ from torch.utils.data import DataLoader, Dataset
 
 class PlantNet:
     def __init__(self,
-                 class_file_path: str,
                  data_dir: str,
                  batch_size: int = 16,
                  image_size: int = None,
                  num_workers: int = 0):
         """
-        Wrapper to load, preprocess and deprocess PlantNet300k dataset.
+        Wrapper to load, preprocess and de-process PlantNet300k dataset.
+
         Args:
-            batch_size (int): Batch size, default: 16.
+            data_dir: Directory of PlantNet 300K dataset (including the species names json)
+            batch_size: Batch size
+            image_size: Desired image size for data
+            num_workers: Number of workers to load images
         """
         if not os.path.exists(data_dir):
             raise ValueError(f'Path "{data_dir}" does not exist')
 
-        data_dir_test = os.path.join(data_dir, "images_test")
-        data_dir_val = os.path.join(data_dir, "images_val")
-        data_dir_train = os.path.join(data_dir, "images_train")
-
-        self.batch_size = batch_size
-        self.image_size = image_size
+        class_file_path = os.path.join(data_dir, 'plantnet300K_species_names.json')
+        if not os.path.exists(class_file_path):
+            raise ValueError(f'Species name file {class_file_path} does not exist')
 
         class_file = open(class_file_path, 'r')
         self.class_to_name = json.load(class_file)
@@ -38,6 +38,13 @@ class PlantNet:
 
         self.classes = list(self.class_to_name.keys())
         self.n_classes = len(self.classes)
+
+        data_dir_train = os.path.join(data_dir, "images_train")
+        data_dir_val = os.path.join(data_dir, "images_val")
+        data_dir_test = os.path.join(data_dir, "images_test")
+
+        self.batch_size = batch_size
+        self.image_size = image_size
 
         self.mean = [0.5, 0.5, 0.5]
         self.std = [0.5, 0.5, 0.5]
@@ -58,17 +65,20 @@ class PlantNet:
             transforms.Normalize(self.mean, self.std)
         ])
 
-        self.train_set = PlantNetDataset(data_root=data_dir_test, classes_list=self.classes, image_size=self.image_size)
+        self.train_set = PlantNetDataset(data_root=data_dir_train, classes_list=self.classes, image_size=self.image_size)
         self.train_set.transform = self.train_transform
-        self.train_loader = DataLoader(self.train_set, batch_size=self.batch_size, shuffle=True, num_workers=num_workers)
+        self.train_loader = DataLoader(self.train_set, batch_size=self.batch_size,
+                                       shuffle=True, num_workers=num_workers)
 
         self.val_set = PlantNetDataset(data_root=data_dir_val, classes_list=self.classes, image_size=self.image_size)
         self.val_set.transform = self.val_transform
-        self.val_loader = DataLoader(self.val_set, batch_size=self.batch_size, shuffle=False, num_workers=num_workers)
+        self.val_loader = DataLoader(self.val_set, batch_size=self.batch_size,
+                                     shuffle=False, num_workers=num_workers)
 
         self.test_set = PlantNetDataset(data_root=data_dir_test, classes_list=self.classes, image_size=self.image_size)
         self.test_set.transform = self.test_transform
-        self.test_loader = DataLoader(self.test_set, batch_size=self.batch_size, shuffle=False, num_workers=num_workers)
+        self.test_loader = DataLoader(self.test_set, batch_size=self.batch_size,
+                                      shuffle=False, num_workers=num_workers)
 
         # invert normalization for tensor to image transform
         self.inv_normalize = transforms.Compose([
@@ -132,7 +142,7 @@ class PlantNetDataset(Dataset):
             for file in os.listdir(class_path):
                 file_path = os.path.join(class_path, file)
 
-                # one datasample is full filepath and index in classes_list
+                # one data sample is full filepath and index in classes_list
                 self.data.append((file_path, label_idx))
 
     def __len__(self):
@@ -171,12 +181,12 @@ class PlantNetDataset(Dataset):
 
 
 if __name__ == "__main__":
-    plantnet_dir = 'D:\data'
+    # plantnet_dir = 'D:\data'
+    plantnet_dir = '/media/johannes-f/F038E25338E217FC/Users/Merkur-PC/Desktop/Plantnet300K/plantnet_300K/'
 
-    data = PlantNet(class_file_path='plantnet_300K_species_names.json',
-                    data_dir=plantnet_dir,
+    data = PlantNet(data_dir=plantnet_dir,
                     batch_size=16,
-                    image_size=64)
+                    image_size=128)
 
     for ims, labels in data.train:
         print("images")
