@@ -3,24 +3,24 @@ import torch.nn as nn
 
 
 class VectorQuantizer(nn.Module):
-    def __init__(self, n_embeddings: int, embedding_dim: int, beta: float = 0.25):
+    def __init__(self, n_embeddings: int, latent_dim: int, beta: float = 0.25):
         """
         Vector quantizer that discretizes the continuous latent z. Adapted from
         https://github.com/MishaLaskin/vqvae/blob/master/models/quantizer.py.
 
         Args:
             n_embeddings (int): Codebook size
-            embedding_dim (int): Dimension of the latent z (channels)
+            latent_dim (int): Dimension of the latent z (channels)
             beta (float): Factor for commitment loss
         """
         super(VectorQuantizer, self).__init__()
 
         self.n_emb = n_embeddings
-        self.e_dim = embedding_dim
+        self.latent_dim = latent_dim
         self.beta = beta
 
-        self.embedding = nn.Embedding(self.n_emb, self.e_dim)
-        self.embedding.weight.data.uniform_(-1. / self.e_dim, 1. / self.e_dim)
+        self.embedding = nn.Embedding(self.n_emb, self.latent_dim)
+        self.embedding.weight.data.uniform_(-1. / self.latent_dim, 1. / self.latent_dim)
 
     def forward(self, z: torch.Tensor):
         """
@@ -36,7 +36,7 @@ class VectorQuantizer(nn.Module):
         """
         # flatten input from [bs, c, h, w] to [bs*h*w, c]
         z = z.permute(0, 2, 3, 1).contiguous()
-        z_flat = z.view(-1, self.e_dim)
+        z_flat = z.view(-1, self.latent_dim)
 
         # calculate distances between each z [bs*h*w, c]
         # and e_j [n_emb, c]: (z - e_j)² = z² + e² - e*z*2
