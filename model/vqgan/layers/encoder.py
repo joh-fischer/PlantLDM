@@ -7,7 +7,7 @@ from model.layers.attention import LinearAttention, Attention
 
 
 class Encoder(nn.Module):
-    def __init__(self, in_channels: int, z_channels: int,
+    def __init__(self, in_channels: int, latent_dim: int,
                  channels: list[int] = None,
                  dim_keys: int = 64, n_heads: int = 4):
         """
@@ -16,7 +16,7 @@ class Encoder(nn.Module):
 
         Args:
             in_channels: Number of input channels of the image
-            z_channels: Number of channels for the latent space
+            latent_dim: Number of channels for the latent space
             channels: List of channels for the number of down/up steps, eg [16, 32, 64]
             dim_keys: Dimension of keys, queries, values for attention layers
             n_heads: Number of heads for multi-head attention
@@ -50,7 +50,7 @@ class Encoder(nn.Module):
         self.mid_block2 = ResidualBlock(self.channels[-1], self.channels[-1])
 
         # output
-        self.out = nn.Conv2d(self.channels[-1], z_channels, kernel_size=3, padding=1)
+        self.out = nn.Conv2d(self.channels[-1], latent_dim, kernel_size=3, padding=1)
 
     def forward(self, x: torch.Tensor):
         x = self.init_conv(x)

@@ -7,7 +7,7 @@ from model.layers.attention import LinearAttention, Attention
 
 
 class Decoder(nn.Module):
-    def __init__(self, in_channels: int, z_channels: int,
+    def __init__(self, in_channels: int, latent_dim: int,
                  channels: list[int] = None,
                  dim_keys: int = 64, n_heads: int = 4):
         """
@@ -16,7 +16,7 @@ class Decoder(nn.Module):
 
         Args:
             in_channels: Number of input channels of the image
-            z_channels: Number of channels for the latent space
+            latent_dim: Number of channels for the latent space
             channels: List of channels for the number of down/up steps, eg [16, 32, 64]. Note
                 that for the decoder the channels list will be reversed
             dim_keys: Dimension of keys, queries, values for attention layers
@@ -27,7 +27,7 @@ class Decoder(nn.Module):
         self.channels = channels if channels is not None else [16, 32, 64]
         self.n_blocks = len(self.channels)
 
-        self.init_conv = nn.Conv2d(z_channels, self.channels[-1], kernel_size=3, padding=1)
+        self.init_conv = nn.Conv2d(latent_dim, self.channels[-1], kernel_size=3, padding=1)
 
         # bottleneck
         self.mid_block1 = ResidualBlock(self.channels[-1], self.channels[-1])
