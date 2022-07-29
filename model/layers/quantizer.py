@@ -32,7 +32,7 @@ class VectorQuantizer(nn.Module):
             z: Output of the encoder network, shape [bs, latent_dim, h, w]
         Returns:
             z_q: Quantized z
-            loss: 
+            loss: Sum of embedding loss and scaled commitment loss
         """
         # flatten input from [bs, c, h, w] to [bs*h*w, c]
         z = z.permute(0, 2, 3, 1).contiguous()
