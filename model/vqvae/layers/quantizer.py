@@ -7,10 +7,10 @@ class VectorQuantizer(nn.Module):
         """
         Vector quantizer that discretizes the continuous latent z. Adapted from
         https://github.com/MishaLaskin/vqvae/blob/master/models/quantizer.py.
-
         Args:
             n_embeddings (int): Codebook size
             embedding_dim (int): Dimension of the latent z (channels)
+            beta (float): Factor for commitment loss
         """
         super(VectorQuantizer, self).__init__()
 
@@ -21,17 +21,14 @@ class VectorQuantizer(nn.Module):
         self.embedding = nn.Embedding(self.n_emb, self.e_dim)
         self.embedding.weight.data.uniform_(-1. / self.e_dim, 1. / self.e_dim)
 
-    def forward(self, z):
+    def forward(self, z: torch.Tensor):
         """
         Maps the output of the encoder network z (continuous) to a discrete one-hot
         vector z_q, where the index indicates the closest embedding vector e_j. The
         latent z is detached as first step to allow straight through backprop.
-
         Args:
             z: Output of the encoder network, shape [bs, latent_dim, h, w]
-
         Returns:
-
         """
         # flatten input from [bs, c, h, w] to [bs*h*w, c]
         z = z.permute(0, 2, 3, 1).contiguous()
@@ -68,7 +65,6 @@ class VectorQuantizer(nn.Module):
 
 
 if __name__ == "__main__":
-    # encoder output and decoder input: [bs, 10, 32, 32]
     latent = torch.randn((8, 10, 32, 32))
 
     vq = VectorQuantizer(4, 10)

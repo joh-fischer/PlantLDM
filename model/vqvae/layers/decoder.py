@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from model.layers.residual import ResidualLayer
+from model.vqvae.layers.residual import ResidualLayer
 
 
 class Decoder(nn.Module):
