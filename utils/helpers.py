@@ -2,7 +2,7 @@ import os
 import torch
 
 
-def load_vqvae_checkpoint(model, filepath, device):
+def load_model_checkpoint(model, filepath, device):
     """ Load model checkpoint """
     if os.path.isfile(filepath):
         ckpt = torch.load(filepath, map_location=device)
@@ -16,7 +16,7 @@ def load_vqvae_checkpoint(model, filepath, device):
     return model, start_epoch, global_train_step
 
 
-def save_vqvae_checkpoint(model, ckpt_dir, logger):
+def save_model_checkpoint(model, ckpt_dir, logger):
     epoch = logger.running_epoch
     global_train_step = logger.global_train_step
     state = {'epoch': epoch, 'model_state_dict': model.state_dict(),
@@ -32,6 +32,11 @@ def log2tensorboard_vqvae(logger, global_tag, tags):
         logger.tensorboard.add_scalar(tb_tag, logger.epoch[tag].avg,
                                       global_step=logger.global_train_step)
 
+def log2tensorboard_ddpm(logger, global_tag, tags):
+    for tag in tags:
+        tb_tag = global_tag + '/' + tag
+        logger.tensorboard.add_scalar(tb_tag, logger.epoch[tag].avg,
+                                      global_step=logger.global_train_step)
 
 def timer(start, end):
     hours, rem = divmod(end - start, 3600)
