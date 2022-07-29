@@ -7,9 +7,9 @@
 27.07.
 - [X] Training Loop Implementation VQ-VAE
 - [ ] VQGAN Implementation
-- [ ] U-Net Implementation
-- [ ] DDPM
-- [ ] Training Loop Implementation DDPM
+- [X] U-Net Implementation
+- [X] DDPM
+- [X] Training Loop Implementation DDPM
 - [ ] Training of VQGAN
 
 29.07.
