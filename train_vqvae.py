@@ -41,7 +41,7 @@ parser.add_argument('--lr', default=0.0001,
 parser.add_argument('--config', default='configs/vqvae.yaml',
                     metavar='PATH', help='Path to model config file (default: configs/vqvae.yaml)')
 parser.add_argument('--data-config', default='configs/data_se.yaml',
-                    metavar='PATH', help='Path to model config file (default: configs/data_jo.yaml)')
+                    metavar='PATH', help='Path to model config file (default: configs/data_se.yaml)')
 parser.add_argument('--debug', action='store_true',
                     help='If true, trains on CIFAR10')
 parser.add_argument('--gpus', default=0, type=int,
@@ -138,12 +138,10 @@ def train(model, train_loader, optimizer, device):
     for x, _ in tqdm(train_loader, desc="Training"):
         x = x.to(device)
 
-        x_hat, z_e, z_q = model(x)
+        x_hat, emb_loss = model(x)
 
         rec_loss = torch.nn.functional.mse_loss(x_hat, x)
-        emb_loss = torch.mean((z_q.detach() - z_e) ** 2)
-        com_loss = torch.mean((z_q - z_e.detach()) ** 2)
-        loss = rec_loss + emb_loss + 0.25 * com_loss
+        loss = rec_loss + emb_loss
 
         optimizer.zero_grad()
         loss.backward()
@@ -171,12 +169,10 @@ def validate(model, val_loader, device):
     for x, _ in tqdm(val_loader, desc="Validation"):
         x = x.to(device)
 
-        x_hat, z_e, z_q = model(x)
+        x_hat, emb_loss = model(x)
 
         rec_loss = torch.nn.functional.mse_loss(x_hat, x)
-        emb_loss = torch.mean((z_q.detach() - z_e) ** 2)
-        com_loss = torch.mean((z_q - z_e.detach()) ** 2)
-        loss = rec_loss + emb_loss + 0.25 * com_loss
+        loss = rec_loss + emb_loss
 
         metrics = {'val_rec_loss': rec_loss, 'val_emb_loss': emb_loss, 'val_loss': loss}
         logger.log_metrics(metrics, phase='val', aggregate=True, n=x.shape[0])
