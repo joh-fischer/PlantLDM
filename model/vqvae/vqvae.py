@@ -38,12 +38,10 @@ class VQVAE(nn.Module):
         return x_hat, loss
 
     def encode(self, x: torch.Tensor):
-        """
-        Encode input image.
+        """ Encode input image.
 
         Args:
             x: Input image
-
         Returns:
             z_q: Quantized embedding
         """
@@ -53,12 +51,10 @@ class VQVAE(nn.Module):
         return z_q
 
     def decode(self, z_e: torch.Tensor):
-        """
-        Decode latent representation to input image.
+        """ Decode latent representation to input image.
 
         Args:
             z_e: Un-quantized latent representation.
-
         Returns:
             x_hat: Reconstructed input image.
         """
