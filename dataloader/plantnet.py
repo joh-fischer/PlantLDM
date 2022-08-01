@@ -172,9 +172,6 @@ class PlantNetDataset(Dataset):
         with open(path, "rb") as f:
             img = Image.open(f)
 
-            if img.size != (self.image_size, self.image_size):
-                print("bla")
-
             # if size is given, we make the image a square image in the given size
             if self.image_size and not self.is_preprocessed:
                 # make non-square images square
