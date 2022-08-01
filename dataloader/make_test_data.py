@@ -68,6 +68,18 @@ if __name__ == "__main__":
 
             file_count_current += 1
             im = Image.open(os.path.join(subdir, file))
+
+            # make non-square images square
+            if im.width != im.height:
+                new_size = min(im.width, im.height)
+
+                left = int((im.width - new_size) / 2)
+                top = int((im.height - new_size) / 2)
+                right = int((im.width + new_size) / 2)
+                bottom = int((im.height + new_size) / 2)
+
+                im = im.crop((left, top, right, bottom))
+
             im_resized = im.resize((args.img_size, args.img_size))
             im_resized.save(f"{current_new_subdir}\\{file}")
 
