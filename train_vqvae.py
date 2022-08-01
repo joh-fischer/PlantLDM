@@ -16,9 +16,8 @@ from utils.helpers import log2tensorboard_vqvae
 from utils.visualization import get_original_reconstruction_figure
 from dataloader import CIFAR10, PlantNet
 
-# TODO: check if this is necessary
-# from: https://stackoverflow.com/questions/20554074/sklearn-omp-error-15-initializing-libiomp5md-dll-but-found-mk2iomp5md-dll-a
-os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 
 CHECKPOINT_DIR = os.path.join(pathlib.Path(__file__).parent.resolve(), 'checkpoints')
 LOG_DIR = os.path.join(pathlib.Path(__file__).parent.resolve(), 'logs')
@@ -139,7 +138,12 @@ def train(model, train_loader, optimizer, device):
     for x, _ in tqdm(train_loader, desc="Training"):
         x = x.to(device)
 
-        x_hat, emb_loss = model(x)
+        x_hat, z_e, z_q = model(x)
+
+        # loss
+        codebook_loss = torch.mean((z_q.detach() - z_e) ** 2)
+        commitment_loss = torch.mean((z_q - z_e.detach()) ** 2)
+        emb_loss = codebook_loss + 0.25 * commitment_loss
 
         rec_loss = torch.nn.functional.mse_loss(x_hat, x)
         loss = rec_loss + emb_loss
@@ -170,7 +174,12 @@ def validate(model, val_loader, device):
     for x, _ in tqdm(val_loader, desc="Validation"):
         x = x.to(device)
 
-        x_hat, emb_loss = model(x)
+        x_hat, z_e, z_q = model(x)
+
+        # loss
+        codebook_loss = torch.mean((z_q.detach() - z_e) ** 2)
+        commitment_loss = torch.mean((z_q - z_e.detach()) ** 2)
+        emb_loss = codebook_loss + 0.25 * commitment_loss
 
         rec_loss = torch.nn.functional.mse_loss(x_hat, x)
         loss = rec_loss + emb_loss

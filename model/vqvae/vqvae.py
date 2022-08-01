@@ -29,13 +29,25 @@ class VQVAE(nn.Module):
         self.decoder = Decoder(latent_dim, in_channels, n_res_layers, res_hidden_dim)
 
     def forward(self, x: torch.Tensor):
+        """ Forward pass through vector-quantized variational autoencoder.
+
+        Args:
+            x: Input image tensor.
+        Returns:
+            x_hat: Reconstructed image x
+            z_e: Latent (un-quantized) representation of image x
+            z_q: Quantized latent representation of image x
+        """
         z_e = self.encoder(x)
 
-        z_q, loss = self.vq(z_e)
+        z_q = self.vq(z_e)
 
-        x_hat = self.decoder(z_q)
+        # preserve gradients
+        z_q_ = z_e + (z_q - z_e).detach()
 
-        return x_hat, loss
+        x_hat = self.decoder(z_q_)
+
+        return x_hat, z_e, z_q
 
     def encode(self, x: torch.Tensor):
         """ Encode input image.
@@ -43,10 +55,21 @@ class VQVAE(nn.Module):
         Args:
             x: Input image
         Returns:
-            z_q: Quantized embedding
+            z_e: Encoded input image (un-quantized).
         """
         z_e = self.encoder(x)
-        z_q, _ = self.vq(z_e)
+
+        return z_e
+
+    def quantize(self, z_e: torch.Tensor):
+        """ Quantize latent representation.
+
+        Args:
+            z_e: Un-quantized latent representation (encoded image).
+        Returns:
+            z_q: Quantized embedding.
+        """
+        z_q = self.vq(z_e)
 
         return z_q
 
@@ -58,7 +81,7 @@ class VQVAE(nn.Module):
         Returns:
             x_hat: Reconstructed input image.
         """
-        z_q, _ = self.vq(z_e)
+        z_q = self.vq(z_e)
         x_hat = self.decoder(z_q)
 
         return x_hat
@@ -68,8 +91,9 @@ if __name__ == "__main__":
     ipt = torch.randn((16, 3, 128, 128))
 
     vqvae = VQVAE(3, 10)
-    rec, out_loss = vqvae(ipt)
+    rec, e, q = vqvae(ipt)
 
     print("Input shape:", ipt.shape)    # [bs, 3, 128, 128]
     print("rec shape:", rec.shape)      # [bs, 3, 128, 128]
-    print("Loss:", out_loss)
+    print("embedding:", e.shape)        # [bs, 10, 32, 32]
+    print("quantized:", q.shape)        # [bs, 10, 32, 32]
