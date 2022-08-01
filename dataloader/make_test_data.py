@@ -1,6 +1,8 @@
 import argparse
 import os
 from PIL import Image
+import imghdr
+import shutil
 
 
 def get_argparser():
@@ -39,8 +41,9 @@ if __name__ == "__main__":
     # check if directories exist
     if not os.path.isdir(args.src_dir):
         raise ValueError("src_dir does not exist!")
+
     if not os.path.isdir(args.dst_dir):
-        raise ValueError("dst_dir does not exist!")
+        os.makedirs(args.dst_dir)
 
     dirs = os.listdir(args.src_dir)
 
@@ -52,21 +55,20 @@ if __name__ == "__main__":
     for subdir, dirs, files in os.walk(args.src_dir):
 
         subdir_without_root = subdir.replace(args.src_dir, "")
-        # currently data is separated in test, train and val. We combine these and do the split later in the dataloader
-        subdir_without_root = subdir_without_root.replace("images_test", "")
-        subdir_without_root = subdir_without_root.replace("images_train", "")
-        subdir_without_root = subdir_without_root.replace("images_val", "")
         current_new_subdir = f"{args.dst_dir}\\{subdir_without_root}"
 
-        # for performance reasons we create subdirs even if they don't have files in them. Else we would have to
-        # check this in the files loop
-        if not os.path.exists(current_new_subdir):
+        if not os.path.isdir(current_new_subdir):
             os.makedirs(current_new_subdir)
 
         for file in files:
+            # if the file is not an image, just copy it
+            if not imghdr.what(os.path.join(subdir, file)) in ["jpg", "jpeg", "png", "gif"]:
+                shutil.copyfile(f"{subdir}\\{file}", f"{current_new_subdir}\\{file}")
+                continue
+
             file_count_current += 1
             im = Image.open(os.path.join(subdir, file))
-            im_resized = im.resize((args.img_size, args.img_size))  # TODO: maybe with Image.ANTIALIAS?
+            im_resized = im.resize((args.img_size, args.img_size))
             im_resized.save(f"{current_new_subdir}\\{file}")
 
             if file_count_current % 500 == 0:
