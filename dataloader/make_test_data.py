@@ -1,7 +1,6 @@
 import argparse
 import os
 from PIL import Image
-import imghdr
 import shutil
 
 
@@ -62,7 +61,9 @@ if __name__ == "__main__":
 
         for file in files:
             # if the file is not an image, just copy it
-            if not imghdr.what(os.path.join(subdir, file)) in ["jpg", "jpeg", "png", "gif"]:
+
+            filename, file_extension = os.path.splitext(os.path.join(subdir, file))
+            if file_extension not in [".jpg", ".jpeg", ".png", ".gif"]:
                 shutil.copyfile(f"{subdir}\\{file}", f"{current_new_subdir}\\{file}")
                 continue
 
