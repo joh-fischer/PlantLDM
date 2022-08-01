@@ -180,9 +180,6 @@ def validate(model):
                                   get_sample_images_for_ddpm(images, n_ims=n_images),
                                   global_step=logger.global_train_step)
 
-    # save model
-    # torch.save(model.state_dict(), f"{pathlib.Path(__file__).parent.resolve()}/ddpm_test.pth")
-
 
 if __name__ == "__main__":
     try:

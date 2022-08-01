@@ -109,7 +109,8 @@ def get_original_reconstruction_figure(x: torch.Tensor, x_hat: torch.Tensor, n_i
 
     return fig
 
-def get_sample_images_for_ddpm(images: list(), n_ims: int = 8, fig_size: tuple = (14, 4), dpi: int = 150):
+
+def get_sample_images_for_ddpm(images: list(), n_ims: int = 8, fig_size: tuple = (8, 10), dpi: int = 150):
     """
     Returns figure of original and reconstruction images. Top row are originals, bottom
     row are reconstructions. Slower but larger images.
@@ -132,8 +133,7 @@ def get_sample_images_for_ddpm(images: list(), n_ims: int = 8, fig_size: tuple =
     cmap = None if c > 1 else 'gray'
 
     fig, axes = plt.subplots(nrows=n_ims, ncols=n_cols, figsize=fig_size,
-                             dpi=dpi, tight_layout=True, squeeze=True,
-                             gridspec_kw={'wspace': 0, 'hspace': 0})
+                             dpi=dpi, gridspec_kw={'wspace': 0, 'hspace': 0})
 
     for im_idx in range(n_cols):
         for row_idx in range(n_ims):
@@ -143,6 +143,13 @@ def get_sample_images_for_ddpm(images: list(), n_ims: int = 8, fig_size: tuple =
             ax.imshow(im, cmap=cmap)
             ax.get_xaxis().set_ticks([])
             ax.get_yaxis().set_ticks([])
+
+            if row_idx == 0:
+                ax.set_xlabel(f"t = {col_idxs[im_idx]}", fontsize=6)
+                ax.xaxis.set_label_position('top')
+
+            if im_idx == 0:
+                ax.set_ylabel(f"Image {row_idx + 1}", fontsize=6)
 
     return fig
 
