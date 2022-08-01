@@ -1,1 +1,2 @@
-data_dir: 'D:\data'
+data_dir: 'D:\data_128'
+is_preprocessed: True # bool value that indicates whether the image data is already resized etc
