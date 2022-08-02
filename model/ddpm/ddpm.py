@@ -5,6 +5,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
 
+from model.ddpm.beta_schedule import BetaSchedule
+
 
 class DDPM(nn.Module):
     def __init__(
@@ -35,15 +37,7 @@ class DDPM(nn.Module):
         # define beta schedule
         self.beta_1 = beta_1
         self.beta_2 = beta_2
-        self.betas = None
-        if beta_schedule == "linear":
-            self.betas = self.linear_beta_schedule()
-        elif beta_schedule == "quadratic":
-            self.betas = self.quadratic_beta_schedule()
-        elif beta_schedule == "sigmoid":
-            self.betas = self.sigmoid_beta_schedule()
-        elif beta_schedule == "cosine":
-            self.betas = self.cosine_beta_schedule()
+        self.betas = BetaSchedule(self.beta_1, self.beta_2, beta_schedule, self.n_steps).values
 
         # define alphas
         self.alphas = 1.0 - self.betas
@@ -151,24 +145,3 @@ class DDPM(nn.Module):
     @torch.no_grad()
     def sample(self, image_size, batch_size=16, channels=3):
         return self.p_sample_loop(shape=(batch_size, channels, image_size, image_size))
-
-    def cosine_beta_schedule(self, s: float = 0.008):
-        """
-        cosine schedule as proposed in https://arxiv.org/abs/2102.09672
-        """
-        steps = self.n_steps + 1
-        x = torch.linspace(0, self.n_steps, steps)
-        alphas_cumprod = torch.cos(((x / self.n_steps) + s) / (1 + s) * torch.pi * 0.5) ** 2
-        alphas_cumprod = alphas_cumprod / alphas_cumprod[0]
-        beta_values = 1 - (alphas_cumprod[1:] / alphas_cumprod[:-1])
-        return torch.clip(beta_values, 0.0001, 0.9999)
-
-    def linear_beta_schedule(self):
-        return torch.linspace(self.beta_1, self.beta_2, self.n_steps)
-
-    def quadratic_beta_schedule(self):
-        return torch.linspace(self.beta_1 ** 0.5, self.beta_2 ** 0.5, self.n_steps) ** 2
-
-    def sigmoid_beta_schedule(self):
-        beta_values = torch.linspace(-6, 6, self.n_steps)
-        return torch.sigmoid(beta_values) * (self.beta_2 - self.beta_1) + self.beta_1
