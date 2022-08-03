@@ -62,7 +62,7 @@ def main():
         print("{:<16}: {}".format(name, val))
 
     # setup paths and logging
-    args.name = 'first_stage/' + args.name
+    args.name = 'vqvae/' + args.name
     running_log_dir = os.path.join(LOG_DIR, args.name, f'{TIMESTAMP}')
     running_ckpt_dir = os.path.join(CHECKPOINT_DIR, args.name, f'{TIMESTAMP}')
     print("{:<16}: {}".format('logdir', running_log_dir))
