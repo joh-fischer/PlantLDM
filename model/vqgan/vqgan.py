@@ -7,26 +7,22 @@ from model.vqgan.layers.decoder import Decoder
 
 
 class VQGAN(nn.Module):
-    def __init__(self, latent_dim: int,
-                 ae_cfg: dict,
-                 n_embeddings: int = 512):
-        """
-        Vector-Quantized  (paper: https://arxiv.org/abs/1711.00937).
+    def __init__(self, latent_dim: int, autoencoder_cfg: dict, n_embeddings: int = 512):
+        """ Vector-quantized GAN (paper: https://arxiv.org/abs/2012.09841)
 
         Args:
-            in_channels: Image input channels
             latent_dim: Latent dimension of the embedding/codebook
-            n_res_layers: Number of residual blocks
-            res_hidden_dim: Hidden dimension of the residual blocks
+            autoencoder_cfg: Dictionary containing the information for the encoder and decoder. For
+                example {'in_channels': 3, 'channels': [16, 32, 64], 'dim_keys': 64, 'n_heads': 4}.
             n_embeddings: Number of embeddings for the codebook
         """
         super().__init__()
 
-        self.encoder = Encoder(latent_dim=latent_dim, **ae_cfg)
+        self.encoder = Encoder(latent_dim=latent_dim, **autoencoder_cfg)
 
         self.vq = VectorQuantizer(n_embeddings, latent_dim)
 
-        self.decoder = Decoder(latent_dim=latent_dim, **ae_cfg)
+        self.decoder = Decoder(latent_dim=latent_dim, **autoencoder_cfg)
 
     def forward(self, x: torch.Tensor):
         """ Forward pass through vector-quantized variational autoencoder.

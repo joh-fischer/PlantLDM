@@ -1,0 +1,17 @@
+model:
+  autoencoder_cfg:
+    in_channels: 3
+    channels:
+      - 16
+      - 32
+      - 64
+    dim_keys: 64
+    n_heads: 4
+
+  latent_dim: 10
+  n_embeddings: 512
+
+loss:
+  perceptual_weight: 1
+  codebook_weight: 1
+  commitment_weight: 0.25
