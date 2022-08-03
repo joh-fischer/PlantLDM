@@ -1,5 +1,5 @@
 torch
-torchvision
+torchvision>=0.13
 tensorboard
 pyyaml
 tqdm
