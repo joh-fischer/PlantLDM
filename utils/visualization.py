@@ -109,6 +109,7 @@ def get_original_reconstruction_figure(x: torch.Tensor, x_hat: torch.Tensor, n_i
 
     return fig
 
+
 def get_sample_images_for_ddpm(images: list(), n_ims: int = 8, fig_size: tuple = (14, 4), dpi: int = 150):
     """
     Returns figure of original and reconstruction images. Top row are originals, bottom
