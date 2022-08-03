@@ -63,6 +63,8 @@ class LossVQGAN(nn.Module):
         else:
             perceptual_loss = torch.tensor([0.0])
 
+        # TODO: disciminator loss
+
         # final loss and logs
         loss = rec_loss + codebook_loss + perceptual_loss
         log = {
