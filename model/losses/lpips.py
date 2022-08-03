@@ -3,7 +3,7 @@
 import os
 import torch
 import torch.nn as nn
-from vgg16 import VGG16
+from model.losses.vgg16 import VGG16
 
 CUR_DIR = os.path.dirname(__file__)
 
