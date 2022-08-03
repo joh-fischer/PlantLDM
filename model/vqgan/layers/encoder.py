@@ -8,7 +8,7 @@ from model.layers.attention import LinearAttention, Attention
 
 class Encoder(nn.Module):
     def __init__(self, in_channels: int, latent_dim: int,
-                 channels=None,
+                 channels: list[int] = None,
                  dim_keys: int = 64, n_heads: int = 4):
         """
         Encoder for VQ-GAN like specified in https://arxiv.org/abs/2012.09841, table 7. The

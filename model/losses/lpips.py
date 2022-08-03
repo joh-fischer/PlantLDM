@@ -14,7 +14,8 @@ class LPIPS(nn.Module):
         super(LPIPS, self).__init__()
         self.scaling_layer = ScalingLayer()
         self.chns = [64, 128, 256, 512, 512]
-        self.net = VGG16(pretrained=True, requires_grad=False)
+        # set pretrained False, as we will load our own pretrained model
+        self.net = VGG16(pretrained=False, requires_grad=False)
         self.lin0 = NetLinLayer(self.chns[0], use_dropout=use_dropout)
         self.lin1 = NetLinLayer(self.chns[1], use_dropout=use_dropout)
         self.lin2 = NetLinLayer(self.chns[2], use_dropout=use_dropout)
@@ -77,11 +78,10 @@ def spatial_average(x, keepdim=True):
 
 
 if __name__ == "__main__":
-    lpips = LPIPS().eval()
-
     ipt = torch.rand((8, 3, 128, 128))
     tgt = torch.rand((8, 3, 128, 128))
 
+    lpips = LPIPS().eval()
     l_diff = lpips(ipt, tgt)
     l_same = lpips(ipt, ipt)
 
