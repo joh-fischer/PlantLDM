@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 
-from model.layers.residual import ResidualBlock
-from model.layers.scaling import UpSample
-from model.layers.attention import LinearAttention, Attention
+from model.layers import ResidualBlock
+from model.layers import UpSample
+from model.layers import LinearAttention, Attention
 
 
 class Decoder(nn.Module):

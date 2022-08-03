@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 
-from model.layers.quantizer import VectorQuantizer
-from model.vqgan.layers.encoder import Encoder
-from model.vqgan.layers.decoder import Decoder
+from model.layers import VectorQuantizer
+from model.vqgan.layers import Encoder
+from model.vqgan.layers import Decoder
 
 
 class VQGAN(nn.Module):
