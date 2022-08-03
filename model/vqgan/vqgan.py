@@ -10,6 +10,16 @@ class VQGAN(nn.Module):
     def __init__(self, latent_dim: int,
                  ae_cfg: dict,
                  n_embeddings: int = 512):
+        """
+        Vector-Quantized  (paper: https://arxiv.org/abs/1711.00937).
+
+        Args:
+            in_channels: Image input channels
+            latent_dim: Latent dimension of the embedding/codebook
+            n_res_layers: Number of residual blocks
+            res_hidden_dim: Hidden dimension of the residual blocks
+            n_embeddings: Number of embeddings for the codebook
+        """
         super().__init__()
 
         self.encoder = Encoder(latent_dim=latent_dim, **ae_cfg)
@@ -19,22 +29,59 @@ class VQGAN(nn.Module):
         self.decoder = Decoder(latent_dim=latent_dim, **ae_cfg)
 
     def forward(self, x: torch.Tensor):
+        """ Forward pass through vector-quantized variational autoencoder.
+
+        Args:
+            x: Input image tensor.
+        Returns:
+            x_hat: Reconstructed image x
+            z_e: Latent (un-quantized) representation of image x
+            z_q: Quantized latent representation of image x
+        """
         z_e = self.encoder(x)
 
-        z_q, loss = self.vq(z_e)
+        z_q = self.vq(z_e)
 
-        x_hat = self.decoder(z_q)
+        # preserve gradients
+        z_q_ = z_e + (z_q - z_e).detach()
 
-        return x_hat, loss
+        x_hat = self.decoder(z_q_)
+
+        return x_hat, z_e, z_q
 
     def encode(self, x: torch.Tensor):
+        """ Encode input image.
+
+        Args:
+            x: Input image
+        Returns:
+            z_e: Encoded input image (un-quantized).
+        """
         z_e = self.encoder(x)
-        z_q, _ = self.vq(z_e)
+
+        return z_e
+
+    def quantize(self, z_e: torch.Tensor):
+        """ Quantize latent representation.
+
+        Args:
+            z_e: Un-quantized latent representation (encoded image).
+        Returns:
+            z_q: Quantized embedding.
+        """
+        z_q = self.vq(z_e)
 
         return z_q
 
     def decode(self, z_e: torch.Tensor):
-        z_q, _ = self.vq(z_e)
+        """ Decode latent representation to input image.
+
+        Args:
+            z_e: Un-quantized latent representation.
+        Returns:
+            x_hat: Reconstructed input image.
+        """
+        z_q = self.vq(z_e)
         x_hat = self.decoder(z_q)
 
         return x_hat
@@ -51,8 +98,9 @@ if __name__ == "__main__":
     }
 
     vqgan = VQGAN(10, autoencoder_cfg)
-    rec, out_loss = vqgan(ipt)
+    rec, e, q = vqgan(ipt)
 
     print("Input shape:", ipt.shape)    # [bs, 3, 128, 128]
     print("rec shape:", rec.shape)      # [bs, 3, 128, 128]
-    print("Loss:", out_loss)
+    print("embedding:", e.shape)        # [bs, 10, 16, 16]
+    print("quantized:", q.shape)        # [bs, 10, 16, 16]
