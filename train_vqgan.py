@@ -101,6 +101,7 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), args.lr)
 
     criterion = LossVQGAN(**cfg['loss'])
+    criterion.to(device)
 
     # resume training
     if args.load_checkpoint:
