@@ -14,7 +14,7 @@ from utils.logger import Logger
 from utils.helpers import timer
 from utils.helpers import load_model_checkpoint, save_model_checkpoint
 from utils.helpers import log2tensorboard_vqvae
-from utils.visualization import get_original_reconstruction_figure
+from utils.visualization import get_original_reconstruction_image
 from dataloader import CIFAR10, PlantNet
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -157,9 +157,9 @@ def train(model, train_loader, optimizer, criterion, device):
 
         if logger.global_train_step % 150 == 0:
             log2tensorboard_vqvae(logger, 'Train', logs_keys)
-            logger.tensorboard.add_figure('Train: Original vs. Reconstruction',
-                                          get_original_reconstruction_figure(x, x_hat, n_ims=8),
-                                          global_step=logger.global_train_step)
+            ims = get_original_reconstruction_image(x, x_hat, n_ims=8)
+            logger.tensorboard.add_image('Train: Original vs. Reconstruction', ims,
+                                         global_step=logger.global_train_step, dataformats='HWC')
 
         logger.global_train_step += 1
 
@@ -188,9 +188,9 @@ def validate(model, val_loader, criterion, device):
 
         if is_first:
             is_first = False
-            logger.tensorboard.add_figure('Val: Original vs. Reconstruction',
-                                          get_original_reconstruction_figure(x, x_hat, n_ims=8),
-                                          global_step=logger.global_train_step)
+            ims = get_original_reconstruction_image(x, x_hat, n_ims=8)
+            logger.tensorboard.add_image('Val: Original vs. Reconstruction', ims,
+                                         global_step=logger.global_train_step, dataformats='HWC')
 
     log2tensorboard_vqvae(logger, 'Val', logs_keys)
 
