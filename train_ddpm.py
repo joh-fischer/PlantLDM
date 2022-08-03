@@ -123,7 +123,9 @@ def main():
     logger.log_hparams({**cfg, **vars(args)})
     t_start = time.time()
     for epoch in range(start_epoch, args.epochs):
+
         logger.init_epoch(epoch)
+        logger.global_train_step = logger.running_epoch
         print(f"Epoch [{epoch + 1} / {args.epochs}]")
 
         train(ddpm, data.train, optimizer, device)
@@ -167,8 +169,6 @@ def train(model, train_loader, optimizer, device):
         if logger.global_train_step % 150 == 0:
             log2tensorboard_ddpm(logger, 'Train DDPM', ['ema_loss', 'loss'])
 
-        logger.global_train_step += 1
-
 @torch.no_grad()
 def validate(model):
     model.eval()
@@ -179,9 +179,6 @@ def validate(model):
     logger.tensorboard.add_figure('Val: DDPM',
                                   get_sample_images_for_ddpm(images, n_ims=n_images),
                                   global_step=logger.global_train_step)
-
-    # save model
-    # torch.save(model.state_dict(), f"{pathlib.Path(__file__).parent.resolve()}/ddpm_test.pth")
 
 
 if __name__ == "__main__":

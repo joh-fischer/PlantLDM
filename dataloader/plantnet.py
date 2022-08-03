@@ -14,6 +14,7 @@ class PlantNet:
     def __init__(self,
                  data_dir: str,
                  batch_size: int = 16,
+                 is_preprocessed=True,
                  image_size: int = None,
                  num_workers: int = 0):
         """
@@ -44,6 +45,7 @@ class PlantNet:
         data_dir_test = os.path.join(data_dir, "images_test")
 
         self.batch_size = batch_size
+        self.is_preprocessed = is_preprocessed
         self.image_size = image_size
 
         self.mean = [0.5, 0.5, 0.5]
@@ -65,17 +67,20 @@ class PlantNet:
             transforms.Normalize(self.mean, self.std)
         ])
 
-        self.train_set = PlantNetDataset(data_root=data_dir_train, classes_list=self.classes, image_size=self.image_size)
+        self.train_set = PlantNetDataset(data_root=data_dir_train, classes_list=self.classes,
+                                         is_preprocessed=self.is_preprocessed, image_size=self.image_size)
         self.train_set.transform = self.train_transform
         self.train_loader = DataLoader(self.train_set, batch_size=self.batch_size,
                                        shuffle=True, num_workers=num_workers)
 
-        self.val_set = PlantNetDataset(data_root=data_dir_val, classes_list=self.classes, image_size=self.image_size)
+        self.val_set = PlantNetDataset(data_root=data_dir_val, classes_list=self.classes,
+                                       is_preprocessed=self.is_preprocessed, image_size=self.image_size)
         self.val_set.transform = self.val_transform
         self.val_loader = DataLoader(self.val_set, batch_size=self.batch_size,
                                      shuffle=False, num_workers=num_workers)
 
-        self.test_set = PlantNetDataset(data_root=data_dir_test, classes_list=self.classes, image_size=self.image_size)
+        self.test_set = PlantNetDataset(data_root=data_dir_test, classes_list=self.classes,
+                                        is_preprocessed=self.is_preprocessed, image_size=self.image_size)
         self.test_set.transform = self.test_transform
         self.test_loader = DataLoader(self.test_set, batch_size=self.batch_size,
                                       shuffle=False, num_workers=num_workers)
@@ -121,11 +126,17 @@ class PlantNet:
 
 
 class PlantNetDataset(Dataset):
-    def __init__(self, data_root, classes_list, image_size=None, transform=None):
+    def __init__(self,
+                 data_root,
+                 classes_list,
+                 is_preprocessed=False,
+                 image_size=None,
+                 transform=None):
         self.data_root = data_root
 
         self.data = []
 
+        self.is_preprocessed = is_preprocessed
         self.image_size = image_size
 
         self.transform = transform if transform is not None else transforms.ToTensor()
@@ -151,19 +162,18 @@ class PlantNetDataset(Dataset):
     def __getitem__(self, idx):
         img_path, label = self.data[idx]
 
-        img = self.pil_loader(img_path, self.image_size)
+        img = self.pil_loader(img_path)
         img = self.transform(img)
 
         return img, label
 
-    @staticmethod
-    def pil_loader(path: str, size: int = None):
+    def pil_loader(self, path: str):
         # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
         with open(path, "rb") as f:
             img = Image.open(f)
 
             # if size is given, we make the image a square image in the given size
-            if size:
+            if self.image_size and not self.is_preprocessed:
                 # make non-square images square
                 if img.width != img.height:
                     new_size = min(img.width, img.height)
@@ -175,7 +185,10 @@ class PlantNetDataset(Dataset):
 
                     img = img.crop((left, top, right, bottom))
 
-                img = img.resize((size, size))
+                img = img.resize((self.image_size, self.image_size))
+
+            elif not self.is_preprocessed:
+                raise ValueError("is_preprocessed flag is set to false but no image size for preprocessing is given!")
 
             return np.array(img)
 
