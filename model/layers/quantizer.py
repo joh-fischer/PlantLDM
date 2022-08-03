@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import einops
 
 
 class VectorQuantizer(nn.Module):
@@ -29,9 +30,10 @@ class VectorQuantizer(nn.Module):
         Returns:
             z_q: Quantized z
         """
+        bs, c, h, w = z.shape
+
         # flatten input from [bs, c, h, w] to [bs*h*w, c]
-        z = z.permute(0, 2, 3, 1).contiguous()
-        z_flat = z.view(-1, self.latent_dim)
+        z_flat = einops.rearrange(z, 'b c h w -> (b h w) c')
 
         # calculate distances between each z [bs*h*w, c]
         # and e_j [n_emb, c]: (z - e_j)² = z² + e² - e*z*2
@@ -47,10 +49,10 @@ class VectorQuantizer(nn.Module):
         argmin_one_hot = nn.functional.one_hot(argmin_inds, num_classes=self.n_emb).float().to(z.device)
 
         # multiply one-hot w. embedding weights to get quantized z
-        z_q = torch.matmul(argmin_one_hot, self.embedding.weight).view(z.shape)
+        z_q = torch.matmul(argmin_one_hot, self.embedding.weight)
 
         # reshape back to [bs, c, h, w]
-        z_q = z_q.permute(0, 3, 1, 2).contiguous()
+        z_q = einops.rearrange(z_q, '(b h w) c -> b c h w', b=bs, h=h, w=w)
 
         return z_q
 
