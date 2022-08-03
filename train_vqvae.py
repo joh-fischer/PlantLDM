@@ -140,11 +140,12 @@ def train(model, train_loader, optimizer, device):
 
         x_hat, z_e, z_q = model(x)
 
-        # loss
+        # embedding loss
         codebook_loss = torch.mean((z_q.detach() - z_e) ** 2)
         commitment_loss = torch.mean((z_q - z_e.detach()) ** 2)
         emb_loss = codebook_loss + 0.25 * commitment_loss
 
+        # reconstruction loss
         rec_loss = torch.nn.functional.mse_loss(x_hat, x)
         loss = rec_loss + emb_loss
 
@@ -176,11 +177,12 @@ def validate(model, val_loader, device):
 
         x_hat, z_e, z_q = model(x)
 
-        # loss
+        # embedding loss
         codebook_loss = torch.mean((z_q.detach() - z_e) ** 2)
         commitment_loss = torch.mean((z_q - z_e.detach()) ** 2)
         emb_loss = codebook_loss + 0.25 * commitment_loss
 
+        # reconstruction loss
         rec_loss = torch.nn.functional.mse_loss(x_hat, x)
         loss = rec_loss + emb_loss
 
