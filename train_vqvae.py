@@ -138,30 +138,30 @@ def train(model, train_loader, optimizer, device):
         x_hat, z_e, z_q = model(x)
 
         # embedding loss
-        codebook_loss = torch.mean((z_q.detach() - z_e) ** 2)
+        embedding_loss = torch.mean((z_q.detach() - z_e) ** 2)
         commitment_loss = torch.mean((z_q - z_e.detach()) ** 2)
-        emb_loss = codebook_loss + 0.25 * commitment_loss
+        codebook_loss = embedding_loss + 0.25 * commitment_loss
 
         # reconstruction loss
         rec_loss = torch.nn.functional.mse_loss(x_hat, x)
-        loss = rec_loss + emb_loss
+        loss = rec_loss + codebook_loss
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        metrics = {'rec_loss': rec_loss, 'emb_loss': emb_loss, 'loss': loss}
+        metrics = {'rec_loss': rec_loss, 'codebook_loss': codebook_loss, 'loss': loss}
         logger.log_metrics(metrics, phase='train', aggregate=True, n=x.shape[0])
 
         if logger.global_train_step % 150 == 0:
-            log2tensorboard_vqvae(logger, 'Train', ['rec_loss', 'emb_loss', 'loss'])
+            log2tensorboard_vqvae(logger, 'Train', ['rec_loss', 'codebook_loss', 'loss'])
             ims = get_original_reconstruction_image(x, x_hat, n_ims=8)
             logger.tensorboard.add_image('Train: Original vs. Reconstruction', ims,
                                          global_step=logger.global_train_step, dataformats='HWC')
 
         logger.global_train_step += 1
 
-    log2tensorboard_vqvae(logger, 'Train', ['rec_loss', 'emb_loss', 'loss'])
+    log2tensorboard_vqvae(logger, 'Train', ['rec_loss', 'codebook_loss', 'loss'])
 
 
 @torch.no_grad()
@@ -175,15 +175,15 @@ def validate(model, val_loader, device):
         x_hat, z_e, z_q = model(x)
 
         # embedding loss
-        codebook_loss = torch.mean((z_q.detach() - z_e) ** 2)
+        embedding_loss = torch.mean((z_q.detach() - z_e) ** 2)
         commitment_loss = torch.mean((z_q - z_e.detach()) ** 2)
-        emb_loss = codebook_loss + 0.25 * commitment_loss
+        codebook_loss = embedding_loss + 0.25 * commitment_loss
 
         # reconstruction loss
         rec_loss = torch.nn.functional.mse_loss(x_hat, x)
-        loss = rec_loss + emb_loss
+        loss = rec_loss + codebook_loss
 
-        metrics = {'val_rec_loss': rec_loss, 'val_emb_loss': emb_loss, 'val_loss': loss}
+        metrics = {'val_rec_loss': rec_loss, 'val_codebook_loss': codebook_loss, 'val_loss': loss}
         logger.log_metrics(metrics, phase='val', aggregate=True, n=x.shape[0])
 
         if is_first:
@@ -192,7 +192,7 @@ def validate(model, val_loader, device):
             logger.tensorboard.add_image('Val: Original vs. Reconstruction', ims,
                                          global_step=logger.global_train_step, dataformats='HWC')
 
-    log2tensorboard_vqvae(logger, 'Val', ['val_rec_loss', 'val_emb_loss', 'val_loss'])
+    log2tensorboard_vqvae(logger, 'Val', ['val_rec_loss', 'val_codebook_loss', 'val_loss'])
 
 
 if __name__ == "__main__":
