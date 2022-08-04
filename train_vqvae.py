@@ -115,9 +115,9 @@ def main():
         logger.init_epoch(epoch)
         print(f"Epoch [{epoch + 1} / {args.epochs}]")
 
-        train(model, data.train, optimizer, device)
+        train(model, data.train, optimizer, criterion, device)
 
-        validate(model, data.val, device)
+        validate(model, data.val, criterion, device)
 
         # logging
         output = ' - '.join([f'{k}: {v.avg:.4f}' for k, v in logger.epoch.items()])
