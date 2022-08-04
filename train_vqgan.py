@@ -44,8 +44,8 @@ parser.add_argument('--data-config', default='configs/data_se.yaml',
                     metavar='PATH', help='Path to model config file (default: configs/data_se.yaml)')
 parser.add_argument('--debug', action='store_true',
                     help='If true, trains on CIFAR10')
-parser.add_argument('--gpu', default=0, type=int,
-                    metavar='GPU', help='If GPU available, which GPU to use for training.')
+parser.add_argument('--gpus', default=0, type=int,
+                    nargs='+', metavar='GPUS', help='If GPU(s) available, which GPU(s) to use for training.')
 parser.add_argument('--ckpt-save', default=True, action=argparse.BooleanOptionalAction,
                     dest='save_checkpoint', help='Save checkpoints to folder')
 parser.add_argument('--load-ckpt', default=None, metavar='PATH',
@@ -76,8 +76,12 @@ def main():
     logger = Logger(running_log_dir, tensorboard=True)
 
     # setup GPU
-    device = torch.device(f'cuda:{args.gpu}' if torch.cuda.is_available() else 'cpu')
+    args.gpus = args.gpus if isinstance(args.gpus, list) else [args.gpus]
+    os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(gpu) for gpu in args.gpus])
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("{:<16}: {}".format('device', device))
+    if torch.cuda.device_count() > 1:
+        raise ValueError('Currently multi-gpu training is not possible')
 
     # load data
     if args.debug:
