@@ -16,3 +16,9 @@ loss:
   perceptual_weight: 1
   codebook_weight: 1
   commitment_weight: 0.25
+
+discriminator:
+  disc_weight: 1.,
+  disc_in_channels: 3,
+  disc_n_layers: 2,
+  disc_res_blocks: False

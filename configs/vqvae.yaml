@@ -14,3 +14,4 @@ loss:
   perceptual_weight: 0
   codebook_weight: 1
   commitment_weight: 0.25
+  disc_weight: 0
