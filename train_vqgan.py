@@ -146,6 +146,8 @@ def train(model, train_loader, optimizer, criterion, device):
         x_hat, z_e, z_q = model(x)
 
         # compute loss
+        # TODO: if iter < 100, dont update D
+        # TODO: update normally, then update discriminator
         loss, logs = criterion(x_hat, x, z_e, z_q)
         if logs_keys is None:
             logs_keys = logs.keys()
