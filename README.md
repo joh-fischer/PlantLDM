@@ -1,28 +1,20 @@
 # PlantLDM
 
-## Planned Timeline:
-20.07.
-- [X] VQVAE
+## Experiments
 
-27.07.
-- [X] Training Loop Implementation VQ-VAE
-- [ ] VQGAN Implementation
-- [X] U-Net Implementation
-- [X] DDPM
-- [X] Training Loop Implementation DDPM
-- [ ] Training of VQGAN
+### Compare L1 to L2
 
-29.07.
-- [ ] Deployment (somewhere)
-- [ ] Full training with CIFAR10
-- [ ] Deployment of resized and cropped plant images (128x128)
+- run VQVAE with L1 and L2, respectively
+- compare results
+- is Isola paper right, less blurry results with L1?
 
-01.08.
-- [ ] Adjustments to models 
+### Embedding Loss
+- embedding loss first increases, then drops, and then increases again
+- can we tackle that problem with more epochs?
 
-04.08.
-- [ ] Training with PlantNet
-
+### VQ-GAN without Discriminator
+- run VQ-GAN without discriminator
+- does it give sharp results?
 
 ## Setup
 
@@ -65,22 +57,28 @@ python3 train_vqvae.py --name mydebug --epochs 10 --debug
 ```
 
 
-### Help message
+### Usage
 
 You can print the help message with `python3 train_first_stage.py -h`.
 
 ```
+usage: train_vqvae.py [-h] [--name NAME] [--epochs N] [--batch-size N] [--image-size N]
+                      [--num-workers N] [--lr LR] [--config PATH] [--data-config PATH] [--debug]
+                      [--gpus GPUS [GPUS ...]] [--ckpt-save | --no-ckpt-save] [--load-ckpt PATH]
+                      [--log-save-interval N]
+
 PyTorch First Stage Training
 
-options:
+optional arguments:
   -h, --help            show this help message and exit
   --name NAME, -n NAME  Model name and folder where logs are stored
   --epochs N            Number of epochs to run (default: 2)
   --batch-size N        Mini-batch size (default: 64)
-  --image-size          Size that images should be resized to in preprocessing (default: 128)
+  --image-size N        Size that images should be resized to before processing (default: 128)
+  --num-workers N       Number of workers for the dataloader (default: 0)
   --lr LR               Initial learning rate (default: 0.0001)
   --config PATH         Path to model config file (default: configs/vqvae.yaml)
-  --data-config PATH    Path to model config file (default: configs/data_jo.yaml)
+  --data-config PATH    Path to model config file (default: configs/data_se.yaml)
   --debug               If true, trains on CIFAR10
   --gpus GPUS [GPUS ...]
                         If GPU(s) available, which GPU(s) to use for training.
