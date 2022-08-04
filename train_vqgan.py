@@ -9,7 +9,7 @@ from datetime import datetime
 import torch
 
 from model.vqgan import VQGAN
-from model.losses import LossVQGAN
+from model.losses import LossFn
 from utils.logger import Logger
 from utils.helpers import timer
 from utils.helpers import load_model_checkpoint, save_model_checkpoint
@@ -100,7 +100,7 @@ def main():
 
     optimizer = torch.optim.Adam(model.parameters(), args.lr)
 
-    criterion = LossVQGAN(**cfg['loss'])
+    criterion = LossFn(**cfg['loss'])
     criterion.to(device)
 
     # resume training

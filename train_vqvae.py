@@ -9,6 +9,7 @@ from datetime import datetime
 import torch
 
 from model.vqvae import VQVAE
+from model.losses import LossFn
 from utils.logger import Logger
 from utils.helpers import timer
 from utils.helpers import load_model_checkpoint, save_model_checkpoint
@@ -91,10 +92,13 @@ def main():
     cfg = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
 
     # create model and optimizer
-    model = VQVAE(**cfg)
+    model = VQVAE(**cfg['model'])
     model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), args.lr)
+
+    criterion = LossFn(**cfg['loss'])
+    criterion.to(device)
 
     # resume training
     if args.load_checkpoint:
@@ -129,62 +133,56 @@ def main():
     print(f"Total training time: {elapsed_time}")
 
 
-def train(model, train_loader, optimizer, device):
+def train(model, train_loader, optimizer, criterion, device):
     model.train()
 
+    logs_keys = None
     for x, _ in tqdm(train_loader, desc="Training"):
         x = x.to(device)
 
         x_hat, z_e, z_q = model(x)
 
-        # embedding loss
-        embedding_loss = torch.mean((z_q.detach() - z_e) ** 2)
-        commitment_loss = torch.mean((z_q - z_e.detach()) ** 2)
-        codebook_loss = embedding_loss + 0.25 * commitment_loss
-
-        # reconstruction loss
-        rec_loss = torch.nn.functional.mse_loss(x_hat, x)
-        loss = rec_loss + codebook_loss
+        # compute loss
+        loss, logs = criterion(x_hat, x, z_e, z_q)
+        if logs_keys is None:
+            logs_keys = logs.keys()
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        metrics = {'rec_loss': rec_loss, 'codebook_loss': codebook_loss, 'loss': loss}
-        logger.log_metrics(metrics, phase='train', aggregate=True, n=x.shape[0])
+        logger.log_metrics(logs, phase='train', aggregate=True, n=x.shape[0])
 
         if logger.global_train_step % 150 == 0:
-            log2tensorboard_vqvae(logger, 'Train', ['rec_loss', 'codebook_loss', 'loss'])
+            log2tensorboard_vqvae(logger, 'Train', logs_keys)
             ims = get_original_reconstruction_image(x, x_hat, n_ims=8)
             logger.tensorboard.add_image('Train: Original vs. Reconstruction', ims,
                                          global_step=logger.global_train_step, dataformats='HWC')
 
         logger.global_train_step += 1
 
-    log2tensorboard_vqvae(logger, 'Train', ['rec_loss', 'codebook_loss', 'loss'])
+    log2tensorboard_vqvae(logger, 'Train', logs_keys)
 
 
 @torch.no_grad()
-def validate(model, val_loader, device):
+def validate(model, val_loader, criterion, device):
     model.eval()
 
     is_first = True
+    logs_keys = None
     for x, _ in tqdm(val_loader, desc="Validation"):
         x = x.to(device)
 
         x_hat, z_e, z_q = model(x)
 
-        # embedding loss
-        embedding_loss = torch.mean((z_q.detach() - z_e) ** 2)
-        commitment_loss = torch.mean((z_q - z_e.detach()) ** 2)
-        codebook_loss = embedding_loss + 0.25 * commitment_loss
+        # compute loss
+        loss, logs = criterion(x_hat, x, z_e, z_q)
 
-        # reconstruction loss
-        rec_loss = torch.nn.functional.mse_loss(x_hat, x)
-        loss = rec_loss + codebook_loss
-
-        metrics = {'val_rec_loss': rec_loss, 'val_codebook_loss': codebook_loss, 'val_loss': loss}
-        logger.log_metrics(metrics, phase='val', aggregate=True, n=x.shape[0])
+        # logging
+        logs = {'val_' + k: v for k, v in logs.items()}
+        if logs_keys is None:
+            logs_keys = logs.keys()
+        logger.log_metrics(logs, phase='val', aggregate=True, n=x.shape[0])
 
         if is_first:
             is_first = False
@@ -192,7 +190,7 @@ def validate(model, val_loader, device):
             logger.tensorboard.add_image('Val: Original vs. Reconstruction', ims,
                                          global_step=logger.global_train_step, dataformats='HWC')
 
-    log2tensorboard_vqvae(logger, 'Val', ['val_rec_loss', 'val_codebook_loss', 'val_loss'])
+    log2tensorboard_vqvae(logger, 'Val', logs_keys)
 
 
 if __name__ == "__main__":
