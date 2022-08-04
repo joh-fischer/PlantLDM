@@ -1,1 +1,1 @@
-from .loss import LossVQGAN
+from .loss import LossFn

@@ -2,34 +2,46 @@ import torch
 import torch.nn as nn
 
 from model.losses.lpips import LPIPS
+from model.losses.reconstruction import ReconstructionLoss
+from model.losses.codebook import CodebookLoss
 
 
-class LossVQGAN(nn.Module):
+class LossFn(nn.Module):
     def __init__(self,
+                 rec_loss_type: str = 'L1',
                  perceptual_weight: int = 1,
                  codebook_weight: int = 1.,
                  commitment_weight: int = 0.25):
         """
-        A class for computing and combining the different losses used in VQ-GAN.
+        A class for computing and combining the different losses used in VQ-VAE
+        and VQ-GAN.
 
         Args:
+            rec_loss_type: Loss-type for reconstruction loss, either L1 or L2.
             perceptual_weight: Weight for the perceptual LPIPS loss.
             codebook_weight: Weight for the codebook loss of the vector quantizer.
             commitment_weight: Beta for the commitment loss of the vector quantizer.
         """
         super().__init__()
+        # reconstruction loss (take L1 as it is produces less blurry
+        # results according to https://arxiv.org/abs/1611.07004)
+        self.rec_loss_fn = ReconstructionLoss(rec_loss_type)
 
-        self.perceptual_weight = perceptual_weight
+        # embedding loss (including stop-gradient according to
+        # the paper https://arxiv.org/abs/1711.00937)
         self.codebook_weight = codebook_weight
-        self.commitment_weight = commitment_weight
+        self.codebook_loss_fn = CodebookLoss(commitment_weight)
 
-        self.perceptual_loss = LPIPS().eval()
+        # perceptual loss (perceptual loss using LPIPS according
+        # to the paper https://arxiv.org/abs/1801.03924)
+        self.perceptual_weight = perceptual_weight
+        self.perceptual_loss_fn = LPIPS().eval() if perceptual_weight > 0 else None
 
     def forward(self, x_hat: torch.Tensor, x: torch.Tensor,
                 z_e: torch.Tensor, z_q: torch.Tensor):
         """
-        Computues the loss for VQ-GAN including the following sub-losses:
-        - L1 reconstruction loss
+        Computes the final loss including the following sub-losses:
+        - reconstruction loss
         - codebook loss for vector quantizer
         - perceptual loss using LPIPS
 
@@ -43,42 +55,30 @@ class LossVQGAN(nn.Module):
             loss: The combined loss.
             log: A dictionary containing all sub-losses and the total loss.
         """
+        log = {}
+        loss = torch.tensor([0.0]).to(x.device)
 
-        # reconstruction loss (take L1 as it is produces less blurry
-        # results according to https://arxiv.org/abs/1611.07004)
-        rec_loss = torch.mean(torch.abs(x_hat - x))
+        rec_loss = self.rec_loss_fn(x_hat, x)
+        loss += rec_loss
+        log['rec_loss'] = rec_loss.item()
 
-        # embedding loss (including stop-gradient according to
-        # the paper https://arxiv.org/abs/1711.00937)
-        embedding_loss = torch.mean((z_q.detach() - z_e) ** 2)
-        commitment_loss = torch.mean((z_q - z_e.detach()) ** 2)
-        codebook_loss = embedding_loss + self.commitment_weight * commitment_loss
-        codebook_loss *= self.codebook_weight
+        codebook_loss = self.codebook_weight * self.codebook_loss_fn(z_e, z_q)
+        loss += codebook_loss
+        log['codebook_loss'] = codebook_loss.item()
 
-        # perceptual loss (perceptual loss using LPIPS according
-        # to the paper https://arxiv.org/abs/1801.03924)
-        if self.perceptual_weight > 0:
-            perceptual_loss = self.perceptual_loss(x_hat, x)
+        if self.perceptual_loss_fn is not None:
+            perceptual_loss = self.perceptual_loss_fn(x_hat, x)
             perceptual_loss *= self.perceptual_weight
-        else:
-            perceptual_loss = torch.tensor([0.0])
+            loss += perceptual_loss
+            log['perceptual_loss'] = perceptual_loss.item()
 
-        # TODO: disciminator loss
-
-        # final loss and logs
-        loss = rec_loss + codebook_loss + perceptual_loss
-        log = {
-            'rec_loss': rec_loss.item(),
-            'codebook_loss': codebook_loss.item(),
-            'perceptual_loss': perceptual_loss.item(),
-            'loss': loss.item()
-        }
+        log['loss'] = loss.item()
 
         return loss, log
 
 
 if __name__ == "__main__":
-    l_vqgan = LossVQGAN()
+    l_vqgan = LossFn(perceptual_weight=1)
 
     ipt = torch.randn((8, 3, 128, 128))
 
