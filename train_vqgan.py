@@ -45,7 +45,7 @@ parser.add_argument('--data-config', default='configs/data_se.yaml',
 parser.add_argument('--debug', action='store_true',
                     help='If true, trains on CIFAR10')
 parser.add_argument('--gpu', default=0, type=int,
-                    nargs=1, metavar='GPU', help='If GPU available, which GPU to use for training.')
+                    metavar='GPU', help='If GPU available, which GPU to use for training.')
 parser.add_argument('--ckpt-save', default=True, action=argparse.BooleanOptionalAction,
                     dest='save_checkpoint', help='Save checkpoints to folder')
 parser.add_argument('--load-ckpt', default=None, metavar='PATH',
