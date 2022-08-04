@@ -81,8 +81,8 @@ def main():
     print("{:<16}: {}".format('device', device))
     # if torch.cuda.device_count() > 1:
     #     raise ValueError('Currently multi-gpu training is not possible')
-    device = torch.device(f'cuda:{args.gpu}' if torch.cuda.is_available() else 'cpu')
-    print("{:<16}: {}".format('device', device))
+    # device = torch.device(f'cuda:{args.gpu}' if torch.cuda.is_available() else 'cpu')
+    # print("{:<16}: {}".format('device', device))
 
     # load data
     if args.debug:
