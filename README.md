@@ -1,6 +1,21 @@
 # PlantLDM
 
+## TODO's
+
+- [ ] Make loss config for vqgan singleton, s.t. we can easily change it
+- [ ] Test discriminator (including warm-up phase)
+- [ ] conduct experiments with VQ-GAN
+- [ ] Implement training script of DDPM with encoder and decoder of first stage training
+- [ ] Yu et al (2022) state that codebook is merely used in VQ-GAN. Maybe apply some proposals of them to enhance it?
+
 ## Experiments
+
+### VQ-GAN
+- train only with L2 and codebook loss (VQ-VAE with better encoder-decoder)
+- train only with perceptual loss, no adversarial loss
+- train only with adversarial loss, no perceptual loss
+- vary warm up iterations
+
 
 ### Compare L1 to L2
 
@@ -12,9 +27,6 @@
 - embedding loss first increases, then drops, and then increases again
 - can we tackle that problem with more epochs?
 
-### VQ-GAN without Discriminator
-- run VQ-GAN without discriminator
-- does it give sharp results?
 
 ### Change Loss Parameters
 - Yu et al. ((2022)[https://arxiv.org/abs/2110.04627]) used different parameters
