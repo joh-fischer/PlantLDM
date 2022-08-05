@@ -4,7 +4,6 @@ model:
     channels:
       - 32
       - 64
-      - 128
     dim_keys: 64
     n_heads: 4
 
@@ -16,7 +15,7 @@ loss:
   perceptual_weight: 0.1
   codebook_weight: 0.9
   commitment_weight: 0.25
-  disc_weight: 0.
-  #disc_in_channels: 3
-  #disc_n_layers: 2
-  #disc_res_blocks: False
+  disc_weight: 0.1
+  disc_in_channels: 3
+  disc_n_layers: 2
+  disc_res_blocks: False
