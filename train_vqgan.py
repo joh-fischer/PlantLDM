@@ -99,6 +99,10 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), args.lr)
 
     criterion = LossFn(**cfg['loss'])
+    # TODO
+    # set discriminator weight to 0 as we start updating it only at a later stage
+    # (see https://arxiv.org/abs/2012.09841).
+    # criterion.disc_weight = 0
     criterion.to(device)
 
     # resume training
@@ -137,6 +141,11 @@ def main():
 def train(model, train_loader, optimizer, criterion, device):
     model.train()
 
+    # In https://arxiv.org/abs/2012.09841 they set the factor for the adversarial loss
+    # to zero for the first iterations (suggestion: at least one epoch). Longer warm-ups
+    # generally lead to better reconstructions.
+    warm_up_iters = 300
+
     logs_keys = None
     for x, _ in tqdm(train_loader, desc="Training"):
         x = x.to(device)
@@ -144,15 +153,18 @@ def train(model, train_loader, optimizer, criterion, device):
         x_hat, z_e, z_q = model(x)
 
         # compute loss
-        # TODO: if iter < 100, dont update D
-        # TODO: update normally, then update discriminator
+        # TODO: if iter < threshold, dont update D
         loss, logs = criterion(x_hat, x, z_e, z_q)
-        if logs_keys is None:
-            logs_keys = logs.keys()
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        # update the discriminator
+        _, disc_logs = criterion.update_discriminator(x_hat, x)
+        logs.update(disc_logs)
+        if logs_keys is None:
+            logs_keys = logs.keys()
 
         logger.log_metrics(logs, phase='train', aggregate=True, n=x.shape[0])
 
