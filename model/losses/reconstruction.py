@@ -11,11 +11,10 @@ class ReconstructionLoss(nn.Module):
             rec_loss_type: Either L1 or L2.
         """
         super().__init__()
-
         if rec_loss_type.lower() == 'l1':
-            self.rec_loss_fn = torch.nn.functional.l1_loss
+            self.rec_loss_fn = nn.L1Loss()
         elif rec_loss_type.lower() == 'l2':
-            self.rec_loss_fn = torch.nn.functional.mse_loss
+            self.rec_loss_fn = nn.MSELoss()
         else:
             raise ValueError(f"Unknown reconstruction loss type '{rec_loss_type}'!")
 
