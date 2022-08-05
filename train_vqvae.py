@@ -142,9 +142,17 @@ def train(model, train_loader, optimizer, criterion, device):
         x_hat, z_e, z_q = model(x)
 
         # compute loss
-        loss, logs = criterion(x_hat, x, z_e, z_q)
-        if logs_keys is None:
-            logs_keys = logs.keys()
+        # loss, logs = criterion(x_hat, x, z_e, z_q)
+        # if logs_keys is None:
+        #     logs_keys = logs.keys()
+        embedding_loss = torch.mean((z_q.detach() - z_e) ** 2)
+        commitment_loss = torch.mean((z_q - z_e.detach()) ** 2)
+        codebook_loss = embedding_loss + 0.25 * commitment_loss
+
+        rec_loss = torch.nn.functional.l1_loss(x_hat, x)
+
+        logs = {'codebook_loss': codebook_loss.item(), 'rec_loss': rec_loss.item()}
+        loss = rec_loss + codebook_loss
 
         optimizer.zero_grad()
         loss.backward()
