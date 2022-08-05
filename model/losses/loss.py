@@ -69,9 +69,9 @@ class LossFn(nn.Module):
             loss: The combined loss.
             log: A dictionary containing all sub-losses and the total loss.
         """
-        log = {}
-        loss = torch.tensor([0.0]).to(x.device)
         device = x.device
+        log = {}
+        loss = torch.tensor([0.0]).to(device)
 
         # loss for generator / autoencoder
         if train_autoencoder:
