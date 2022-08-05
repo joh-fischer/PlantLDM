@@ -8,7 +8,7 @@ from tqdm import tqdm
 from datetime import datetime
 import torch
 
-from model import VQGAN
+from model import VQGAN, VQGANLight
 from model.losses import LossFn
 from utils.logger import Logger
 from utils.helpers import timer
@@ -95,7 +95,7 @@ def main():
     cfg = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
 
     # create model and optimizer
-    model = VQGAN(**cfg['model'])
+    model = VQGANLight(**cfg['model'])
     print("{:<16}: {}".format('model params', count_parameters(model)))
     model.to(device)
 
