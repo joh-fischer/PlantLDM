@@ -8,12 +8,13 @@ from tqdm import tqdm
 from datetime import datetime
 import torch
 
-from model.vqgan import VQGAN
+from model import VQGAN
 from model.losses import LossFn
 from utils.logger import Logger
 from utils.helpers import timer
 from utils.helpers import load_model_checkpoint, save_model_checkpoint
 from utils.helpers import log2tensorboard_vqvae
+from utils.helpers import count_parameters
 from utils.visualization import get_original_reconstruction_image
 from dataloader import CIFAR10, PlantNet
 
@@ -76,6 +77,7 @@ def main():
     logger = Logger(running_log_dir, tensorboard=True)
 
     # setup GPU
+    args.gpus = args.gpus if isinstance(args.gpus, list) else [args.gpus]
     if len(args.gpus) == 1:
         device = torch.device(f'cuda:{args.gpus[0]}' if torch.cuda.is_available() else 'cpu')
     else:
@@ -94,6 +96,7 @@ def main():
 
     # create model and optimizer
     model = VQGAN(**cfg['model'])
+    print("{:<16}: {}".format('model params', count_parameters(model)))
     model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), args.lr)
