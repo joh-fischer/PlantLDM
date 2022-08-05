@@ -1,2 +1,0 @@
-data_dir: '/export/home/jfischer/dataset/plantnet_300K/'
-is_preprocessed: false # bool value that indicates whether the image data is already resized etc

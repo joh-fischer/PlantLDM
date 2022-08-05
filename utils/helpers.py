@@ -32,14 +32,20 @@ def log2tensorboard_vqvae(logger, global_tag, tags):
         logger.tensorboard.add_scalar(tb_tag, logger.epoch[tag].avg,
                                       global_step=logger.global_train_step)
 
+
 def log2tensorboard_ddpm(logger, global_tag, tags):
     for tag in tags:
         tb_tag = global_tag + '/' + tag
         logger.tensorboard.add_scalar(tb_tag, logger.epoch[tag].avg,
                                       global_step=logger.global_train_step)
 
+
 def timer(start, end):
     hours, rem = divmod(end - start, 3600)
     minutes, seconds = divmod(rem, 60)
 
     return "{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds)
+
+
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)

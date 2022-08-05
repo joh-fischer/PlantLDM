@@ -1,0 +1,2 @@
+data_dir: '/export/home/jfischer/dataset/plantnet_300K_128'
+is_preprocessed: True

@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
+import einops
 from PIL import Image
 
 
@@ -26,7 +27,7 @@ def tensor_to_image(tensor):
         return Image.fromarray(img[0].numpy()).convert("L")
 
 
-def get_original_reconstruction_image(x: torch.Tensor, x_hat: torch.Tensor, n_ims: int = 8):
+def get_original_reconstruction_image(x: torch.Tensor, x_hat: torch.Tensor, n_ims: int = 8) -> object:
     """
     Returns pillow image of original and reconstruction images. Top row are originals, bottom
     row are reconstructions. Faster than creating a figure.
@@ -37,7 +38,8 @@ def get_original_reconstruction_image(x: torch.Tensor, x_hat: torch.Tensor, n_im
         n_ims: Number of images of that batch to be plotted
 
     Returns:
-        pil_im: Pillow image with top row being originals, bottom row being reconstructions
+        ims: Numpy array in shape [h, w, 3] with top row being originals and
+            bottom row being reconstructions.
     """
     bs, c, h, w = x.shape
 
@@ -49,16 +51,14 @@ def get_original_reconstruction_image(x: torch.Tensor, x_hat: torch.Tensor, n_im
     x = np.transpose(x, (0, 2, 3, 1))
     x_hat = np.transpose(x_hat, (0, 2, 3, 1))
 
-    x = np.reshape(x, (h, -1, 3))
-    x_hat = np.reshape(x_hat, (h, -1, 3))
+    x = einops.rearrange(x, 'b h w c -> h (b w) c')
+    x_hat = einops.rearrange(x_hat, 'b h w c -> h (b w) c')
 
     ims = np.concatenate((x, x_hat), axis=0)
 
     ims = (ims * 127.5 + 127.5).astype(np.uint8)
 
-    pil_im = Image.fromarray(ims)
-
-    return pil_im
+    return ims
 
 
 def get_original_reconstruction_figure(x: torch.Tensor, x_hat: torch.Tensor, n_ims: int = 8,

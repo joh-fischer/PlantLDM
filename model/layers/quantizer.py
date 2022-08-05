@@ -1,25 +1,24 @@
 import torch
 import torch.nn as nn
+import einops
 
 
 class VectorQuantizer(nn.Module):
-    def __init__(self, n_embeddings: int, embedding_dim: int, beta: float = 0.25):
+    def __init__(self, n_embeddings: int, latent_dim: int):
         """
         Vector quantizer that discretizes the continuous latent z. Adapted from
         https://github.com/MishaLaskin/vqvae/blob/master/models/quantizer.py.
         Args:
             n_embeddings (int): Codebook size
-            embedding_dim (int): Dimension of the latent z (channels)
-            beta (float): Factor for commitment loss
+            latent_dim (int): Dimension of the latent z (channels)
         """
         super(VectorQuantizer, self).__init__()
 
         self.n_emb = n_embeddings
-        self.e_dim = embedding_dim
-        self.beta = beta
+        self.latent_dim = latent_dim
 
-        self.embedding = nn.Embedding(self.n_emb, self.e_dim)
-        self.embedding.weight.data.uniform_(-1. / self.e_dim, 1. / self.e_dim)
+        self.embedding = nn.Embedding(self.n_emb, self.latent_dim)
+        self.embedding.weight.data.uniform_(-1. / self.latent_dim, 1. / self.latent_dim)
 
     def forward(self, z: torch.Tensor):
         """
@@ -29,10 +28,12 @@ class VectorQuantizer(nn.Module):
         Args:
             z: Output of the encoder network, shape [bs, latent_dim, h, w]
         Returns:
+            z_q: Quantized z
         """
+        bs, c, h, w = z.shape
+
         # flatten input from [bs, c, h, w] to [bs*h*w, c]
-        z = z.permute(0, 2, 3, 1).contiguous()
-        z_flat = z.view(-1, self.e_dim)
+        z_flat = einops.rearrange(z, 'b c h w -> (b h w) c')
 
         # calculate distances between each z [bs*h*w, c]
         # and e_j [n_emb, c]: (z - e_j)² = z² + e² - e*z*2
@@ -48,28 +49,19 @@ class VectorQuantizer(nn.Module):
         argmin_one_hot = nn.functional.one_hot(argmin_inds, num_classes=self.n_emb).float().to(z.device)
 
         # multiply one-hot w. embedding weights to get quantized z
-        z_q = torch.matmul(argmin_one_hot, self.embedding.weight).view(z.shape)
-
-        # compute loss (embedding & commitment)
-        embedding_loss = torch.mean((z_q.detach() - z)**2)
-        commitment_loss = self.beta * torch.mean((z_q - z.detach())**2)
-        loss = embedding_loss + commitment_loss
-
-        # preserve gradients
-        z_q = z + (z_q - z).detach()
+        z_q = torch.matmul(argmin_one_hot, self.embedding.weight)
 
         # reshape back to [bs, c, h, w]
-        z_q = z_q.permute(0, 3, 1, 2).contiguous()
+        z_q = einops.rearrange(z_q, '(b h w) c -> b c h w', b=bs, h=h, w=w)
 
-        return z_q, loss
+        return z_q
 
 
 if __name__ == "__main__":
     latent = torch.randn((8, 10, 32, 32))
 
     vq = VectorQuantizer(4, 10)
-    q, out_loss = vq(latent)
+    q = vq(latent)
 
     print("Input shape:", latent.shape)
     print("z_q shape:", q.shape)
-    print("loss:", out_loss.item())

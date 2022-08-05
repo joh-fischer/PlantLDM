@@ -10,7 +10,7 @@ model:
   n_embeddings: 512
 
 loss:
-  rec_loss_type: 'L1'
+  rec_loss_type: 'L2'
   perceptual_weight: 0
   codebook_weight: 1
   commitment_weight: 0.25

@@ -1,0 +1,22 @@
+model:
+  autoencoder_cfg:
+    in_channels: 3
+    channels:
+      - 32
+      - 64
+    dim_keys: 64
+    n_heads: 4
+
+  latent_dim: 10
+  n_embeddings: 512
+
+loss:
+  rec_loss_type: 'L1'
+  perceptual_weight: 0
+  codebook_weight: 1.0
+  commitment_weight: 0.25
+  disc_weight: 0
+  disc_in_channels: 3
+  disc_n_layers: 2
+  disc_warm_up_iters: 500
+  disc_res_blocks: False

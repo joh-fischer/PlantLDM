@@ -8,7 +8,7 @@ from tqdm import tqdm
 from datetime import datetime
 import torch
 
-from model import VQVAE
+from model import VQGAN, VQGANLight
 from model.losses import LossFn
 from utils.logger import Logger
 from utils.helpers import timer
@@ -20,9 +20,11 @@ from dataloader import CIFAR10, PlantNet
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
+
 CHECKPOINT_DIR = os.path.join(pathlib.Path(__file__).parent.resolve(), 'checkpoints')
 LOG_DIR = os.path.join(pathlib.Path(__file__).parent.resolve(), 'logs')
 TIMESTAMP = datetime.now().strftime('%y-%m-%d_%H%M%S')
+
 
 parser = argparse.ArgumentParser(description="PyTorch First Stage Training")
 parser.add_argument('--name', '-n', default='',
@@ -37,8 +39,8 @@ parser.add_argument('--num-workers', default=0, metavar='N',
                     type=int, help='Number of workers for the dataloader (default: 0)')
 parser.add_argument('--lr', default=0.0001,
                     type=float, metavar='LR', help='Initial learning rate (default: 0.0001)')
-parser.add_argument('--config', default='configs/vqvae.yaml',
-                    metavar='PATH', help='Path to model config file (default: configs/vqvae.yaml)')
+parser.add_argument('--config', default='configs/vqgan.yaml',
+                    metavar='PATH', help='Path to model config file (default: configs/vqgan.yaml)')
 parser.add_argument('--data-config', default='configs/data_se.yaml',
                     metavar='PATH', help='Path to model config file (default: configs/data_se.yaml)')
 parser.add_argument('--debug', action='store_true',
@@ -52,6 +54,7 @@ parser.add_argument('--load-ckpt', default=None, metavar='PATH',
 parser.add_argument('--log-save-interval', default=5, type=int, metavar='N',
                     dest='save_interval', help="Interval in which logs are saved to disk (default: 5)")
 
+
 logger = Logger(LOG_DIR)
 
 
@@ -61,7 +64,7 @@ def main():
         print("{:<16}: {}".format(name, val))
 
     # setup paths and logging
-    args.name = 'vqvae/' + args.name
+    args.name = 'vqgan/' + args.name
     running_log_dir = os.path.join(LOG_DIR, args.name, f'{TIMESTAMP}')
     running_ckpt_dir = os.path.join(CHECKPOINT_DIR, args.name, f'{TIMESTAMP}')
     print("{:<16}: {}".format('logdir', running_log_dir))
@@ -79,7 +82,6 @@ def main():
         device = torch.device(f'cuda:{args.gpus[0]}' if torch.cuda.is_available() else 'cpu')
     else:
         raise ValueError('Currently multi-gpu training is not possible')
-    print("{:<16}: {}".format('device', device))
 
     # load data
     if args.debug:
@@ -93,7 +95,7 @@ def main():
     cfg = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
 
     # create model and optimizer
-    model = VQVAE(**cfg['model'])
+    model = VQGANLight(**cfg['model'])
     print("{:<16}: {}".format('model params', count_parameters(model)))
     model.to(device)
 
@@ -138,32 +140,38 @@ def main():
 def train(model, train_loader, optimizer, criterion, device):
     model.train()
 
-    logs_keys = None
     for x, _ in tqdm(train_loader, desc="Training"):
         x = x.to(device)
 
         x_hat, z_e, z_q = model(x)
 
         # compute loss
-        loss, logs = criterion(x_hat, x, z_e, z_q)
-        if logs_keys is None:
-            logs_keys = logs.keys()
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        if criterion.disc_weight > 0 and logger.global_train_step > criterion.disc_warm_up_iters:
+            # update generator
+            loss, logs = criterion(x_hat, x, z_e, z_q, disc_training=True)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            # update discriminator
+            _, disc_logs = criterion.update_discriminator(x_hat, x)
+            logs.update(disc_logs)
+        else:
+            loss, logs = criterion(x_hat, x, z_e, z_q)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
         logger.log_metrics(logs, phase='train', aggregate=True, n=x.shape[0])
 
         if logger.global_train_step % 150 == 0:
-            log2tensorboard_vqvae(logger, 'Train', logs_keys)
+            log2tensorboard_vqvae(logger, 'Train', logs.keys())
             ims = get_original_reconstruction_image(x, x_hat, n_ims=8)
             logger.tensorboard.add_image('Train: Original vs. Reconstruction', ims,
                                          global_step=logger.global_train_step, dataformats='HWC')
 
         logger.global_train_step += 1
 
-    log2tensorboard_vqvae(logger, 'Train', logs_keys)
+    log2tensorboard_vqvae(logger, 'Train', logger.epoch.keys())
 
 
 @torch.no_grad()
