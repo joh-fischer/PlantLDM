@@ -1,13 +1,13 @@
 import torch
 from utils.helpers import count_parameters
-from model import VQGAN, VQVAE
+from model import VQGAN, VQVAE, VQGANLight
 import yaml
 
 
 """ VQ-VAE """
 cfg_file = 'configs/vqvae.yaml'
-cfg = yaml.load(open(cfg_file, 'r'), Loader=yaml.Loader)
 
+cfg = yaml.load(open(cfg_file, 'r'), Loader=yaml.Loader)
 model = VQVAE(**cfg['model'])
 
 print("VQ-VAE")
@@ -18,8 +18,8 @@ print("\t{:<12}: {}".format('decoder', count_parameters(model.decoder)))
 
 """ VQ-GAN """
 cfg_file = 'configs/vqgan.yaml'
-cfg = yaml.load(open(cfg_file, 'r'), Loader=yaml.Loader)
 
+cfg = yaml.load(open(cfg_file, 'r'), Loader=yaml.Loader)
 model = VQGAN(**cfg['model'])
 
 print("VQ-GAN")
@@ -28,12 +28,17 @@ print("\t{:<12}: {}".format('encoder', count_parameters(model.encoder)))
 print("\t{:<12}: {}".format('quantizer', count_parameters(model.vq)))
 print("\t{:<12}: {}".format('decoder', count_parameters(model.decoder)))
 
-print("extras:")
-print("\t{:<12}: {}".format('decoder', count_parameters(model.encoder.down_blocks[1][0])))
-print("\t{:<12}: {}".format('decoder', count_parameters(model.encoder.down_blocks[1][1])))
-print("\t{:<12}: {}".format('decoder', count_parameters(model.encoder.down_blocks[1][2])))
-#print("\t{:<12}: {}".format('decoder', count_parameters(model.encoder.down_blocks[1][3])))
-#print("\t{:<12}: {}".format('decoder', count_parameters(model.encoder.down_blocks[1][4])))
+""" VQ-GAN Light """
+cfg_file = 'configs/vqgan.yaml'
+
+cfg = yaml.load(open(cfg_file, 'r'), Loader=yaml.Loader)
+model = VQGANLight(**cfg['model'])
+
+print("VQ-GAN Light")
+print("\t{:<12}: {}".format('total', count_parameters(model)))
+print("\t{:<12}: {}".format('encoder', count_parameters(model.encoder)))
+print("\t{:<12}: {}".format('quantizer', count_parameters(model.vq)))
+print("\t{:<12}: {}".format('decoder', count_parameters(model.decoder)))
 
 
 """ Results
@@ -49,4 +54,10 @@ VQ-GAN
     encoder     : 538442
     quantizer   : 5120
     decoder     : 647267
+    
+VQ-GAN Light
+    total       : 610189
+    encoder     : 272618
+    quantizer   : 5120
+    decoder     : 332451
 """
