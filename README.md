@@ -16,6 +16,10 @@
 - run VQ-GAN without discriminator
 - does it give sharp results?
 
+### Change Loss Parameters
+- Yu et al. ((2022)[https://arxiv.org/abs/2110.04627]) used different parameters
+- $L = L_{VQ} + 0.1 L_{Adv} + 0.1 L_{Perceptual} + 0.1 L_{Logit-Laplace} + 1.0 L_{2}$
+
 ## Setup
 
 Clone the repository and create a virtual environment (optional)
