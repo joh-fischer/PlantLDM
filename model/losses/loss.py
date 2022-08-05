@@ -63,7 +63,7 @@ class LossFn(nn.Module):
             x: Original image.
             z_e: Encoded image.
             z_q: Quantized encoded image.
-            train_autoencoder: If false, only computes discriminator loss.
+            train_autoencoder: If false, computes discriminator loss, else generator loss.
 
         Returns:
             loss: The combined loss.
