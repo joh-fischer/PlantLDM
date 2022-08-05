@@ -102,10 +102,6 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), args.lr)
 
     criterion = LossFn(**cfg['loss'])
-    # TODO
-    # set discriminator weight to 0 as we start updating it only at a later stage
-    # (see https://arxiv.org/abs/2012.09841).
-    # criterion.disc_weight = 0
     criterion.to(device)
 
     # resume training
@@ -144,42 +140,38 @@ def main():
 def train(model, train_loader, optimizer, criterion, device):
     model.train()
 
-    # In https://arxiv.org/abs/2012.09841 they set the factor for the adversarial loss
-    # to zero for the first iterations (suggestion: at least one epoch). Longer warm-ups
-    # generally lead to better reconstructions.
-    warm_up_iters = 300
-
-    logs_keys = None
     for x, _ in tqdm(train_loader, desc="Training"):
         x = x.to(device)
 
         x_hat, z_e, z_q = model(x)
 
         # compute loss
-        # TODO: if iter < threshold, dont update D
-        loss, logs = criterion(x_hat, x, z_e, z_q)
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        # update the discriminator
-        _, disc_logs = criterion.update_discriminator(x_hat, x)
-        logs.update(disc_logs)
-        if logs_keys is None:
-            logs_keys = logs.keys()
+        if criterion.disc_weight > 0 and logger.global_train_step > criterion.disc_warm_up_iters:
+            # update generator
+            loss, logs = criterion(x_hat, x, z_e, z_q, disc_training=True)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            # update discriminator
+            _, disc_logs = criterion.update_discriminator(x_hat, x)
+            logs.update(disc_logs)
+        else:
+            loss, logs = criterion(x_hat, x, z_e, z_q)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
         logger.log_metrics(logs, phase='train', aggregate=True, n=x.shape[0])
 
         if logger.global_train_step % 150 == 0:
-            log2tensorboard_vqvae(logger, 'Train', logs_keys)
+            log2tensorboard_vqvae(logger, 'Train', logs.keys())
             ims = get_original_reconstruction_image(x, x_hat, n_ims=8)
             logger.tensorboard.add_image('Train: Original vs. Reconstruction', ims,
                                          global_step=logger.global_train_step, dataformats='HWC')
 
         logger.global_train_step += 1
 
-    log2tensorboard_vqvae(logger, 'Train', logs_keys)
+    log2tensorboard_vqvae(logger, 'Train', logger.epoch.keys())
 
 
 @torch.no_grad()

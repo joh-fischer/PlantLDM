@@ -18,4 +18,5 @@ loss:
   disc_weight: 0.1
   disc_in_channels: 3
   disc_n_layers: 2
+  disc_warm_up_iters: 500
   disc_res_blocks: False

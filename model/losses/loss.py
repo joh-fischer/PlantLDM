@@ -16,6 +16,7 @@ class LossFn(nn.Module):
                  disc_weight: float = 1.,
                  disc_in_channels: int = 3,
                  disc_n_layers: int = 2,
+                 disc_warm_up_iters: int = 500,
                  disc_res_blocks: bool = False):
         """
         A class for computing and combining the different losses used in VQ-VAE
@@ -50,6 +51,10 @@ class LossFn(nn.Module):
         # are classified as fake as long as they are blurry
         # (according to https://arxiv.org/abs/1611.07004)
         self.disc_weight = disc_weight
+        # In https://arxiv.org/abs/2012.09841 they set the factor for the adversarial loss
+        # to zero for the first iterations (suggestion: at least one epoch). Longer warm-ups
+        # generally lead to better reconstructions.
+        self.disc_warm_up_iters = disc_warm_up_iters if disc_weight > 0 else None
         self.discriminator = Discriminator(disc_in_channels, n_layers=disc_n_layers,
                                            residual_blocks=disc_res_blocks
                                            ) if disc_weight > 0 else None
@@ -57,7 +62,8 @@ class LossFn(nn.Module):
                                          ) if disc_weight > 0 else None
 
     def forward(self, x_hat: torch.Tensor, x: torch.Tensor,
-                z_e: torch.Tensor, z_q: torch.Tensor):
+                z_e: torch.Tensor, z_q: torch.Tensor,
+                disc_training: bool = False):
         """
         Computes the final loss including the following sub-losses:
         - reconstruction loss
@@ -70,6 +76,7 @@ class LossFn(nn.Module):
             x: Original image.
             z_e: Encoded image.
             z_q: Quantized encoded image.
+            disc_training: If true, also trains the discriminator.
 
         Returns:
             loss: The combined loss.
@@ -94,7 +101,7 @@ class LossFn(nn.Module):
             loss += perceptual_loss
             log['perceptual_loss'] = perceptual_loss.item()
 
-        if self.disc_weight > 0:
+        if self.disc_weight > 0 and disc_training:
             disc_out_fake = self.discriminator(x_hat)
             target_fake = torch.ones(disc_out_fake.shape).to(device)
             generator_loss = nn.functional.binary_cross_entropy(disc_out_fake, target_fake)
