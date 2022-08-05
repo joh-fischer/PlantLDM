@@ -12,7 +12,9 @@
 
 ### VQ-GAN
 - train only with L2 and codebook loss (VQ-VAE with better encoder-decoder)
+  - per epoch approx. 13 min
 - train only with perceptual loss, no adversarial loss
+  - per epoch approx. 23 min
 - train only with adversarial loss, no perceptual loss
 - vary warm up iterations
 
