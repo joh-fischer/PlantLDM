@@ -114,7 +114,7 @@ class LossFn(nn.Module):
 
             disc_loss = 0.5 * (disc_loss_real + disc_loss_fake)
             disc_loss *= self.disc_weight
-            log['disc_loss'] = disc_loss_real.item()
+            log['disc_loss'] = disc_loss.item()
             loss += disc_loss
 
         return loss, log
@@ -128,7 +128,10 @@ if __name__ == "__main__":
     latent_e = torch.randn((8, 10, 32, 32))
     latent_q = torch.randn((8, 10, 32, 32))
 
-    out, logs = l_vqgan(ipt, ipt, latent_e, latent_q)       # train_autoencoder=False for discriminator
+    out, logs = l_vqgan(ipt, ipt, latent_e, latent_q)       # train autoencoder
+    print("Output:", out)
+    print("Logs:", logs)
 
+    out, logs = l_vqgan(ipt, ipt, latent_e, latent_q, train_autoencoder=False)       # train discriminator
     print("Output:", out)
     print("Logs:", logs)
