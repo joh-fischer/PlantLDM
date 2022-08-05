@@ -73,12 +73,11 @@ def main():
     logger = Logger(running_log_dir, tensorboard=True)
 
     # setup GPU
-    args.gpus = args.gpus if isinstance(args.gpus, list) else [args.gpus]
-    os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(gpu) for gpu in args.gpus])
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print("{:<16}: {}".format('device', device))
-    if torch.cuda.device_count() > 1:
+    if len(args.gpus) == 1:
+        device = torch.device(f'cuda:{args.gpus[0]}' if torch.cuda.is_available() else 'cpu')
+    else:
         raise ValueError('Currently multi-gpu training is not possible')
+    print("{:<16}: {}".format('device', device))
 
     # load data
     if args.debug:
