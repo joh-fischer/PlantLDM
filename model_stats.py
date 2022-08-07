@@ -1,6 +1,7 @@
 import torch
 from utils.helpers import count_parameters
 from model import VQGAN, VQVAE, VQGANLight
+from model import UNet
 import yaml
 
 
@@ -41,6 +42,18 @@ print("\t{:<12}: {}".format('quantizer', count_parameters(model.vq)))
 print("\t{:<12}: {}".format('decoder', count_parameters(model.decoder)))
 
 
+""" U-Net """
+cfg_file = 'configs/unet.yaml'
+
+cfg = yaml.load(open(cfg_file, 'r'), Loader=yaml.Loader)
+model = UNet(**cfg)
+
+print("U-Net")
+print("\t{:<12}: {}".format('total', count_parameters(model)))
+print("\t{:<12}: {}".format('down-blocks', count_parameters(model.down_blocks)))
+print("\t{:<12}: {}".format('up-blocks', count_parameters(model.up_blocks)))
+
+
 """ Results
 VQ-VAE
     total       : 109623
@@ -60,4 +73,9 @@ VQ-GAN Light
     encoder     : 272618
     quantizer   : 5120
     decoder     : 332451
+
+U-Net
+    total       : 14273123
+    down-blocks : 4197184
+    up-blocks   : 7355456
 """
