@@ -4,10 +4,10 @@ model:
     channels:
       - 128
     dim_keys: 64
-    n_heads: 8
+    n_heads: 4
 
   latent_dim: 3
-  n_embeddings: 1024
+  n_embeddings: 512
 
 loss:
   rec_loss_type: 'L1'
