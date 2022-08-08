@@ -44,7 +44,7 @@ class Discriminator(nn.Module):
         prev_channels = start_channels
         self.blocks = nn.ModuleList([])
         for n in range(1, n_layers+1):
-            channel_mult = min(2 ** n, 8)
+            channel_mult = min(2 ** n, 4)
             out_channels = start_channels * channel_mult
             self.blocks.append(
                 nn.Sequential(
@@ -54,7 +54,7 @@ class Discriminator(nn.Module):
                     ResidualBlock(out_channels, out_channels) if residual_blocks else nn.Identity()
                 )
             )
-            prev_channels = start_channels * channel_mult
+            prev_channels = out_channels
 
         self.out_conv = nn.Conv2d(prev_channels, 1, k, s, p)
         self.apply(weights_init)
@@ -72,7 +72,7 @@ class Discriminator(nn.Module):
 
 
 if __name__ == "__main__":
-    disc = Discriminator(n_layers=2, residual_blocks=True)
+    disc = Discriminator(n_layers=4, residual_blocks=True)
     print(disc)
 
     ipt = torch.randn((8, 3, 128, 128))

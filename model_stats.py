@@ -2,6 +2,7 @@ import torch
 from utils.helpers import count_parameters
 from model import VQGAN, VQVAE, VQGANLight
 from model import UNet
+from model.losses import LossFn
 import yaml
 
 
@@ -52,6 +53,17 @@ print("U-Net")
 print("\t{:<12}: {}".format('total', count_parameters(model)))
 print("\t{:<12}: {}".format('down-blocks', count_parameters(model.down_blocks)))
 print("\t{:<12}: {}".format('up-blocks', count_parameters(model.up_blocks)))
+
+""" Loss """
+cfg_file = 'configs/vqgan.yaml'
+
+cfg = yaml.load(open(cfg_file, 'r'), Loader=yaml.Loader)
+model = LossFn(**cfg['loss'])
+
+print("Loss function")
+print("\t{:<12}: {}".format('total', count_parameters(model)))
+print("\t{:<12}: {}".format('discriminator', count_parameters(model.discriminator)))
+print("\t{:<12}: {}".format('perceptual', count_parameters(model.perceptual_loss_fn)))
 
 
 """ Results
