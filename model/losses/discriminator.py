@@ -56,8 +56,7 @@ class Discriminator(nn.Module):
             )
             prev_channels = start_channels * channel_mult
 
-        self.out_conv = nn.Conv2d(start_channels * (2 ** n_layers), 1, k, s, p)
-
+        self.out_conv = nn.Conv2d(prev_channels, 1, k, s, p)
         self.apply(weights_init)
 
     def forward(self, x: torch.Tensor):
