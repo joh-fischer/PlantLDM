@@ -101,7 +101,7 @@ def main():
 
     optimizer = torch.optim.Adam(model.parameters(), args.lr)
 
-    criterion = LossFn(**cfg['loss'])
+    criterion = LossFn(**cfg['loss'], last_decoder_layer=model.decoder.out)
     criterion.to(device)
 
     # resume training

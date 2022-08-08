@@ -17,7 +17,8 @@ class LossFn(nn.Module):
                  disc_in_channels: int = 3,
                  disc_n_layers: int = 2,
                  disc_warm_up_iters: int = 500,
-                 disc_res_blocks: bool = False):
+                 disc_res_blocks: bool = False,
+                 last_decoder_layer: nn.Module = None):
         """
         A class for computing and combining the different losses used in VQ-VAE
         and VQ-GAN.
@@ -60,6 +61,24 @@ class LossFn(nn.Module):
                                            ) if disc_weight > 0 else None
         self.opt_disc = torch.optim.Adam(self.discriminator.parameters(), lr=0.0002
                                          ) if disc_weight > 0 else None
+        self.last_layer = last_decoder_layer
+
+    def calculate_adaptive_weight(self, rec_loss, generator_loss, last_layer=None):
+        if last_layer is not None:
+            nll_grads = torch.autograd.grad(rec_loss, last_layer,
+                                            retain_graph=True)[0]
+            g_grads = torch.autograd.grad(generator_loss, last_layer,
+                                          retain_graph=True)[0]
+        else:
+            nll_grads = torch.autograd.grad(rec_loss, self.last_layer[0],
+                                            retain_graph=True)[0]
+            g_grads = torch.autograd.grad(generator_loss, self.last_layer[0],
+                                          retain_graph=True)[0]
+
+        d_weight = torch.norm(nll_grads) / (torch.norm(g_grads) + 1e-4)
+        d_weight = torch.clamp(d_weight, 0.0, 1e4).detach()
+
+        return d_weight
 
     def forward(self, x_hat: torch.Tensor, x: torch.Tensor,
                 z_e: torch.Tensor, z_q: torch.Tensor,
@@ -106,6 +125,11 @@ class LossFn(nn.Module):
             target_fake = torch.ones(disc_out_fake.shape).to(device)
             generator_loss = nn.functional.binary_cross_entropy(disc_out_fake, target_fake)
             generator_loss *= self.disc_weight
+
+            if self.last_layer is not None:
+                d_weight = self.calculate_adaptive_weight(rec_loss, generator_loss)
+                generator_loss *= d_weight
+
             loss += generator_loss
             log['generator_loss'] = generator_loss.item()
 
@@ -165,14 +189,15 @@ class LossFn(nn.Module):
 
 
 if __name__ == "__main__":
-    l_vqgan = LossFn(perceptual_weight=1)
+    l_vqgan = LossFn(perceptual_weight=1,
+                     disc_warm_up_iters=0)
 
     ipt = torch.randn((8, 3, 128, 128))
     latent_e = torch.randn((8, 10, 32, 32))
     latent_q = torch.randn((8, 10, 32, 32))
 
     # loss for autoencoder
-    out, logs = l_vqgan(ipt, ipt, latent_e, latent_q)
+    out, logs = l_vqgan(ipt, ipt, latent_e, latent_q, disc_training=True)
     print("Output:", out)
     print("Logs:", logs)
 
