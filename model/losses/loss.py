@@ -65,9 +65,9 @@ class LossFn(nn.Module):
 
     def calculate_adaptive_weight(self, rec_loss, generator_loss):
 
-        rec_grads = torch.autograd.grad(rec_loss, self.last_layer,
+        rec_grads = torch.autograd.grad(rec_loss, self.last_layer[0],
                                         retain_graph=True)[0]
-        generator_grads = torch.autograd.grad(generator_loss, self.last_layer,
+        generator_grads = torch.autograd.grad(generator_loss, self.last_layer[0],
                                               retain_graph=True)[0]
 
         d_weight = torch.norm(rec_grads) / (torch.norm(generator_grads) + 1e-4)
