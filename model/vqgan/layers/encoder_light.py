@@ -29,11 +29,13 @@ class EncoderLight(nn.Module):
         self.down_blocks = nn.ModuleList([])
         prev_channel = in_channels
         for c in self.channels:
-            self.down_blocks.append(nn.Sequential(
-                nn.Conv2d(prev_channel, c, kernel_size=4, stride=2, padding=1),
-                nn.LeakyReLU(0.2, True),
-                ResidualBlock(c, c)
-            ))
+            self.down_blocks.append(
+                nn.Sequential(
+                    nn.Conv2d(prev_channel, c, kernel_size=4, stride=2, padding=1),
+                    nn.LeakyReLU(0.2, True),
+                    ResidualBlock(c, c)
+                )
+            )
             prev_channel = c
 
         # bottleneck

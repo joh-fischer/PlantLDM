@@ -12,6 +12,7 @@ from tqdm import tqdm
 from dataloader import PlantNet, CIFAR10
 from model.ddpm.ddpm import DDPM
 from model.unet import UNet
+from model.unet.unet_light import UNetLight
 from utils.helpers import timer, save_model_checkpoint, load_model_checkpoint, log2tensorboard_ddpm
 from utils.logger import Logger
 from utils.visualization import get_sample_images_for_ddpm
@@ -101,10 +102,9 @@ def main():
 
     # read config file for model
     cfg = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
-    cfg_unet = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
+    cfg_unet = yaml.load(open(args.unet_config, 'r'), Loader=yaml.Loader)
 
-    # TODO: get unet parameters via cfg_unet
-    unet = UNet(3, 128, 64, channels=[32, 64, 128, 256])
+    unet = UNetLight(**cfg_unet)
     unet.to(device)
     ddpm = DDPM(eps_model=unet, **cfg)
     ddpm.to(device)
