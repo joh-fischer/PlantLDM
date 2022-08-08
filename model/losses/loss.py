@@ -63,19 +63,14 @@ class LossFn(nn.Module):
                                          ) if disc_weight > 0 else None
         self.last_layer = last_decoder_layer
 
-    def calculate_adaptive_weight(self, rec_loss, generator_loss, last_layer=None):
-        if last_layer is not None:
-            nll_grads = torch.autograd.grad(rec_loss, last_layer,
-                                            retain_graph=True)[0]
-            g_grads = torch.autograd.grad(generator_loss, last_layer,
-                                          retain_graph=True)[0]
-        else:
-            nll_grads = torch.autograd.grad(rec_loss, self.last_layer[0],
-                                            retain_graph=True)[0]
-            g_grads = torch.autograd.grad(generator_loss, self.last_layer[0],
-                                          retain_graph=True)[0]
+    def calculate_adaptive_weight(self, rec_loss, generator_loss):
 
-        d_weight = torch.norm(nll_grads) / (torch.norm(g_grads) + 1e-4)
+        rec_grads = torch.autograd.grad(rec_loss, self.last_layer,
+                                        retain_graph=True)[0]
+        generator_grads = torch.autograd.grad(generator_loss, self.last_layer,
+                                              retain_graph=True)[0]
+
+        d_weight = torch.norm(rec_grads) / (torch.norm(generator_grads) + 1e-4)
         d_weight = torch.clamp(d_weight, 0.0, 1e4).detach()
 
         return d_weight
