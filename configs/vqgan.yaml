@@ -7,7 +7,7 @@ model:
     dim_keys: 64
     n_heads: 4
 
-  latent_dim: 64
+  latent_dim: 32
   n_embeddings: 512
 
 loss:
