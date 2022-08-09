@@ -183,7 +183,6 @@ def validate(model):
     model.eval()
 
     n_images = 8
-    #images = model.sample(16, batch_size=n_images, channels=10)
     images = model.sample(32, batch_size=n_images, channels=3)
     images = [model.decode(img) for img in images]
 
