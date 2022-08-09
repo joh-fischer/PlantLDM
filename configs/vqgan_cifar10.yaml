@@ -3,7 +3,6 @@ model:
     in_channels: 3
     channels:
       - 16
-      - 32
     dim_keys: 64
     n_heads: 4
 
@@ -17,6 +16,6 @@ loss:
   commitment_weight: 0.25
   disc_weight: 0.1
   disc_in_channels: 3
-  disc_n_layers: 4
+  disc_n_layers: 2
   disc_warm_up_iters: 1000
   disc_res_blocks: False
