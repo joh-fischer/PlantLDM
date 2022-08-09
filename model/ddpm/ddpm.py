@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
 
+from model import VQGANLight
 from model.ddpm.beta_schedule import BetaSchedule
 
 
@@ -12,6 +13,7 @@ class DDPM(nn.Module):
     def __init__(
             self,
             eps_model: nn.Module,
+            vae_model: nn.Module,
             beta_1: float,
             beta_2: float,
             beta_schedule: str,
@@ -21,6 +23,7 @@ class DDPM(nn.Module):
         super(DDPM, self).__init__()
         self.n_steps = n_steps
         self.eps_model = eps_model
+        self.vae_model = vae_model
 
         if not beta_1 < beta_2 < 1.0:
             raise ValueError(f"beta1: {beta_1} < beta2: {beta_2} < 1.0 not fulfilled")
@@ -60,10 +63,31 @@ class DDPM(nn.Module):
         out = a.gather(-1, t.cpu())
         return out.reshape(batch_size, *((1,) * (len(x_shape) - 1))).to(t.device)
 
+    @torch.no_grad()
+    def encode(self, x: torch.Tensor):
+        """
+        Encodes and quantizes an input image
+        """
+        x = self.vae_model.encode(x)
+        x = self.vae_model.quantize(x)
+
+        return x
+
+    @torch.no_grad()
+    def decode(self, x: torch.Tensor):
+        """
+        Decode latent representation to an image
+        """
+        x_hat = self.vae_model.decode(x)
+
+        return x_hat
+
     def q_sample(self, x_start, t, noise=None):
         """
         forward diffusion process
         """
+        x_start = self.encode(x_start)
+
         if noise is None:
             noise = torch.randn_like(x_start)
 
@@ -73,15 +97,6 @@ class DDPM(nn.Module):
         )
 
         return sqrt_alphas_cumprod_t * x_start + sqrt_one_minus_alphas_cumprod_t * noise
-
-    def get_noisy_image(self, x_start, t):
-        """
-        Gets a noisy image for a certain timestep
-        """
-        # add noise
-        x_noisy = self.q_sample(x_start, t=t)
-
-        return x_noisy
 
     def p_losses(self, x_start, noise=None):
         if noise is None:
@@ -139,6 +154,7 @@ class DDPM(nn.Module):
 
         for i in tqdm(reversed(range(0, self.n_steps)), desc='sampling loop time step', total=self.n_steps):
             img = self.p_sample(img, torch.full((b,), i, device=device, dtype=torch.long), i)
+            img = self.decode(img)
             imgs.append(img)
         return imgs
 
