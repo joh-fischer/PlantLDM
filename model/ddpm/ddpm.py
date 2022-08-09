@@ -20,6 +20,19 @@ class DDPM(nn.Module):
             n_steps: int,
             loss_function: str,
     ):
+        """
+        Implementation of a simple Denoising Diffusion Probabilistic Model (DDPM) like presented in
+        https://arxiv.org/abs/2006.11239
+
+        Args:
+            eps_model: unet as neural backbone of the DDPM
+            vae_model: variational autoencoder model for encoding and decoding
+            beta_1: lower variance bound for the beta schedule
+            beta_2: upper variance bound for the beta schedule
+            beta_schedule: beta schedule that defines how noise should be added at each timestep
+            n_steps: number of timesteps
+            loss_function: loss function for training
+        """
         super(DDPM, self).__init__()
         self.n_steps = n_steps
         self.eps_model = eps_model
@@ -127,7 +140,6 @@ class DDPM(nn.Module):
         Returns:
             loss between the noise and the predicted noise of the epsilon model
         """
-
         x_start = self.encode(x_start)
 
         if noise is None:
@@ -150,7 +162,6 @@ class DDPM(nn.Module):
         Returns:
             the calculated loss between ground truth and prediction
         """
-
         if self.loss_function == "l1":
             loss = F.l1_loss(noise, predicted_noise)
         elif self.loss_function == "l2":
@@ -164,6 +175,15 @@ class DDPM(nn.Module):
 
     @torch.no_grad()
     def p_sample(self, x, t, t_index):
+        """
+        samples an image from the latent space
+
+        Args:
+            x: latent tensor to draw the image for
+            t_index: current timestep
+        Returns:
+            the sampled image
+        """
         betas_t = self.extract(self.betas, t, x.shape)
         sqrt_one_minus_alphas_cumprod_t = self.extract(
             self.sqrt_one_minus_alphas_cumprod, t, x.shape
@@ -187,7 +207,12 @@ class DDPM(nn.Module):
     @torch.no_grad()
     def p_sample_loop(self, shape):
         """
-        Implements Algorithm 2 of https://arxiv.org/abs/2006.11239
+        Implements Algorithm 2 of https://arxiv.org/abs/2006.11239 for sampling
+
+        Args:
+            shape: target shape of the sampled images
+        Returns:
+            sampled images
         """
         device = next(self.eps_model.parameters()).device
 
@@ -203,4 +228,14 @@ class DDPM(nn.Module):
 
     @torch.no_grad()
     def sample(self, image_size, batch_size=16, channels=3):
+        """
+        sampling from the latent space
+
+        Args:
+            image_size: target size of the sampled images
+            batch_size: number of sampled images
+            channels: number of channels for the sampled images
+        Returns:
+            sampled images
+        """
         return self.p_sample_loop(shape=(batch_size, channels, image_size, image_size))
