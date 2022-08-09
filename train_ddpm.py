@@ -152,6 +152,8 @@ def main():
                 save_model_checkpoint(unet, f"{running_ckpt_dir_ddpm}", logger)
                 save_model_checkpoint(ddpm, f"{running_ckpt_dir_unet}", logger)
 
+        log2tensorboard_ddpm(logger, 'Train', ['ema_loss', 'loss'])
+
     elapsed_time = timer(t_start, time.time())
     print(f"Total training time: {elapsed_time}")
 
@@ -173,10 +175,7 @@ def train(model, train_loader, optimizer, device):
             ema_loss = 0.9 * ema_loss + 0.1 * loss.item()
 
         metrics = {'ema_loss': ema_loss, 'loss': loss}
-        logger.log_metrics(metrics, phase='train', aggregate=True, n=x.shape[0])
-
-        if logger.global_train_step % 150 == 0:
-            log2tensorboard_ddpm(logger, 'Train DDPM', ['ema_loss', 'loss'])
+        logger.log_metrics(metrics, phase='Train', aggregate=True, n=x.shape[0])
 
 
 @torch.no_grad()
@@ -184,7 +183,9 @@ def validate(model):
     model.eval()
 
     n_images = 8
+    #images = model.sample(16, batch_size=n_images, channels=10)
     images = model.sample(32, batch_size=n_images, channels=3)
+    images = [model.decode(img) for img in images]
 
     logger.tensorboard.add_figure('Val: DDPM',
                                   get_sample_images_for_ddpm(images, n_ims=n_images),

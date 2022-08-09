@@ -25,6 +25,10 @@ class DDPM(nn.Module):
         self.eps_model = eps_model
         self.vae_model = vae_model
 
+        # we don't want to train any parameters of the vae model
+        for param in vae_model.parameters():
+            param.requires_grad = False
+
         if not beta_1 < beta_2 < 1.0:
             raise ValueError(f"beta1: {beta_1} < beta2: {beta_2} < 1.0 not fulfilled")
 
@@ -67,6 +71,11 @@ class DDPM(nn.Module):
     def encode(self, x: torch.Tensor):
         """
         Encodes and quantizes an input image
+
+        Args:
+            x: the image to encode
+        Returns:
+            x: encoded and quantized image
         """
         x = self.vae_model.encode(x)
         x = self.vae_model.quantize(x)
@@ -77,6 +86,11 @@ class DDPM(nn.Module):
     def decode(self, x: torch.Tensor):
         """
         Decode latent representation to an image
+
+        Args:
+            x: latent representation to decode
+        Returns:
+            x_hat: decoded latent representation
         """
         x_hat = self.vae_model.decode(x)
 
@@ -85,9 +99,14 @@ class DDPM(nn.Module):
     def q_sample(self, x_start, t, noise=None):
         """
         forward diffusion process
-        """
-        x_start = self.encode(x_start)
 
+        Args:
+            x_start: start value for the forward process
+            t: current timestep
+            noise: noise to add to the start value
+        Returns:
+            x_start with added noise corresponding to the current timestep
+        """
         if noise is None:
             noise = torch.randn_like(x_start)
 
@@ -99,13 +118,38 @@ class DDPM(nn.Module):
         return sqrt_alphas_cumprod_t * x_start + sqrt_one_minus_alphas_cumprod_t * noise
 
     def p_losses(self, x_start, noise=None):
+        """
+        runs a forward step and calculates the loss
+
+        Args:
+            x_start: start value for the forward process
+            noise: noise to add to the start value
+        Returns:
+            loss between the noise and the predicted noise of the epsilon model
+        """
+
+        x_start = self.encode(x_start)
+
         if noise is None:
             noise = torch.randn_like(x_start)
 
         t = torch.randint(0, self.n_steps, (x_start.shape[0],)).to(x_start.device)  # t ~ Uniform({1, ..., T})
 
-        x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
+        x_noisy = self.q_sample(x_start, t, noise)
         predicted_noise = self.eps_model(x_noisy, t)
+
+        return self.calculate_loss(noise, predicted_noise)
+
+    def calculate_loss(self, noise, predicted_noise):
+        """
+        calculates the loss according to the defined loss function
+
+        Args:
+            noise: ground truth
+            predicted_noise: prediction
+        Returns:
+            the calculated loss between ground truth and prediction
+        """
 
         if self.loss_function == "l1":
             loss = F.l1_loss(noise, predicted_noise)
@@ -148,13 +192,12 @@ class DDPM(nn.Module):
         device = next(self.eps_model.parameters()).device
 
         b = shape[0]
-        # start from pure noise (for each example in the batch)
-        img = torch.randn(shape, device=device)
+        # create noise
+        img = self.encode(torch.randn(shape, device=device))
         imgs = []
 
         for i in tqdm(reversed(range(0, self.n_steps)), desc='sampling loop time step', total=self.n_steps):
             img = self.p_sample(img, torch.full((b,), i, device=device, dtype=torch.long), i)
-            img = self.decode(img)
             imgs.append(img)
         return imgs
 
