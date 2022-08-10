@@ -1,38 +1,11 @@
 # PlantLDM
 
-## TODO's
-
-- [ ] Make loss config for vqgan singleton, s.t. we can easily change it
-- [ ] Test discriminator (including warm-up phase)
-- [ ] conduct experiments with VQ-GAN
-- [ ] Implement training script of DDPM with encoder and decoder of first stage training
-- [ ] Yu et al (2022) state that codebook is merely used in VQ-GAN. Maybe apply some proposals of them to enhance it?
-
-## Experiments
-
-### VQ-GAN
-- train only with L2 and codebook loss (VQ-VAE with better encoder-decoder)
-  - per epoch approx. 13 min
-- train only with perceptual loss, no adversarial loss
-  - per epoch approx. 23 min
-- train only with adversarial loss, no perceptual loss
-- vary warm up iterations
-
-
-### Compare L1 to L2
-
-- run VQVAE with L1 and L2, respectively
-- compare results
-- is Isola paper right, less blurry results with L1?
-
-### Embedding Loss
-- embedding loss first increases, then drops, and then increases again
-- can we tackle that problem with more epochs?
-
-
-### Change Loss Parameters
-- Yu et al. ((2022)[https://arxiv.org/abs/2110.04627]) used different parameters
-- $L = L_{VQ} + 0.1 L_{Adv} + 0.1 L_{Perceptual} + 0.1 L_{Logit-Laplace} + 1.0 L_{2}$
+We implemented a latent diffusion model (Rombach et al., [2021](https://arxiv.org/abs/2112.10752)) for 
+the visual synthesis of plant images of the PlantNet-300K [dataset](https://github.com/plantnet/PlantNet-300K).
+The model is can be split into two stages. The first stages consists of a VQ-GAN
+(Esser et al., [2020](https://arxiv.org/abs/2012.09841)) which encodes the image into a latent representation.
+A Denoising Diffusion Probabilistic Model (Ho et al., [2020](https://arxiv.org/abs/2006.11239)) forms the second stage, 
+synthesizing the latent representations which are then decoded by the decoder of the first stage.
 
 ## Setup
 
@@ -48,61 +21,93 @@ Then install the dependencies
 pip install -r requirements.txt
 ```
 
-## Tensorboard
+## Usage
+
+### Data
+
+After downloading the [data](https://zenodo.org/record/4726653#.YvNwCFpBx3k) you can choose whether you want
+to crop and resize the images on the fly or preprocess them in advance, which saves computational resources
+during training. For the first option, just specify a config
+
+```
+data_dir: '<your_dir_to_data>'
+is_preprocessed: False
+```
+
+and start the training with the `--data-config <your_cfg_file>` argument parser option. Additionally,
+you need to specify the image size with the `--image-size <size>` option.
+
+If you want to save resources and preprocess the data, just run the `make_data.py` script and create a config
+with the respective data directory and the `is_preprocessed` option set to `True`. Then specify this config file
+with the `--data-config <your_cfg_file>` argument parser option.
+
+### Tensorboard
 
 In order to monitor the losses and visualizations just `cd` into the repo and run
 ```
 tensorboard --logdir=logs
 ```
 
-## VQ-VAE
+### VQ-VAE
 
 Implementation of VQ-VAE ([paper](https://arxiv.org/abs/1711.00937v2)).
 
-### Usage
+#### Usage
 
-For the usage on the dataset specified in the data config (`configs/data_<>.yaml`) you can run the following on the
-command line
 
 ```
-python3 train_vqvae.py --name run/e10 --epochs 10 --data-config configs/data_jo.yaml
+python3 train_vqvae.py --name myExp --epochs 2 --config configs/vqvae.yaml
 ```
 
 To first debug the code with `CIFAR10` just run
 
 ```
-python3 train_vqvae.py --name mydebug --epochs 10 --debug
+python3 train_vqvae.py --epochs 2 --config configs/vqvae.yaml --debug
 ```
 
+### VQ-GAN
 
-### Usage
+Implementation of VQ-GAN ([paper](https://arxiv.org/abs/2012.09841)).
 
-You can print the help message with `python3 train_first_stage.py -h`.
+#### Usage
+
 
 ```
-usage: train_vqvae.py [-h] [--name NAME] [--epochs N] [--batch-size N] [--image-size N]
-                      [--num-workers N] [--lr LR] [--config PATH] [--data-config PATH] [--debug]
-                      [--gpus GPUS [GPUS ...]] [--ckpt-save | --no-ckpt-save] [--load-ckpt PATH]
-                      [--log-save-interval N]
+python3 train_vqgan.py --name myExp --epochs 2 --config configs/vqgan.yaml
+```
 
-PyTorch First Stage Training
+To first debug the code with `CIFAR10` just run
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --name NAME, -n NAME  Model name and folder where logs are stored
-  --epochs N            Number of epochs to run (default: 2)
-  --batch-size N        Mini-batch size (default: 64)
-  --image-size N        Size that images should be resized to before processing (default: 128)
-  --num-workers N       Number of workers for the dataloader (default: 0)
-  --lr LR               Initial learning rate (default: 0.0001)
-  --config PATH         Path to model config file (default: configs/vqvae.yaml)
-  --data-config PATH    Path to model config file (default: configs/data_se.yaml)
-  --debug               If true, trains on CIFAR10
-  --gpus GPUS [GPUS ...]
-                        If GPU(s) available, which GPU(s) to use for training.
-  --ckpt-save, --no-ckpt-save
-                        Save checkpoints to folder (default: True)
-  --load-ckpt PATH      Load model checkpoint and continue training
-  --log-save-interval N
-                        Interval in which logs are saved to disk (default: 5)
+```
+python3 train_vqgan.py --epochs 2 --config configs/vqgan.yaml --debug
+```
+
+#### Losses
+
+You can specify which losses to use and which weights for which loss in the `vqgan.yaml` config file. The length of the
+channels list in the config files also determines the down-scaling of the input image. For example, a list with
+two channels (eg [32, 64]) down-samples the image by a factor of 4.
+
+```
+model:
+  autoencoder_cfg:
+    in_channels: 3
+    channels:
+      - 32
+      - 64
+    dim_keys: 64
+    n_heads: 4
+  latent_dim: 32
+  n_embeddings: 512
+
+loss:
+  rec_loss_type: 'L1'
+  perceptual_weight: 0.1
+  codebook_weight: 0.9
+  commitment_weight: 0.25
+  disc_weight: 0.1
+  disc_in_channels: 3
+  disc_n_layers: 4
+  disc_warm_up_iters: 5000
+  disc_res_blocks: False
 ```
