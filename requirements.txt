@@ -7,3 +7,5 @@ pillow
 matplotlib
 numpy
 einops
+opencv-python
+scipy
