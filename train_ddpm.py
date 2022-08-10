@@ -72,7 +72,7 @@ def main():
         print("{:<16}: {}".format(name, val))
 
     # setup paths and logging
-    args.name = 'second_stage/' + args.name
+    args.name = 'second_stage/' + os.path.splitext(os.path.basename(args.config))[0]
     running_log_dir = os.path.join(LOG_DIR, args.name, f'{TIMESTAMP}')
     running_ckpt_dir_ddpm = os.path.join(CHECKPOINT_DIR, args.name, f'{TIMESTAMP}', "ddpm")
     running_ckpt_dir_unet = os.path.join(CHECKPOINT_DIR, args.name, f'{TIMESTAMP}', "unet")
