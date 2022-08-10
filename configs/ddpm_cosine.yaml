@@ -1,0 +1,11 @@
+
+beta_1: 0.0001
+beta_2: 0.02
+
+# beta schedule for the ddpm - one of ['linear', 'quadratic', 'sigmoid', 'cosine']
+beta_schedule: 'cosine'
+
+n_steps: 1000
+
+# loss function for ddpm training - one of ['l1', 'l2', 'huber']
+loss_function: 'l2'
