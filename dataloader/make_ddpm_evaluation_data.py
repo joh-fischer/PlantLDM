@@ -52,41 +52,41 @@ def main():
     for name, val in vars(args).items():
         print("{:<16}: {}".format(name, val))
 
-    if args.sample_gen and args.gen_image_path and not os.path.exists(args.gen_image_path):
-        os.makedirs(args.gen_image_path)
-
-    if args.sample_real and args.real_image_path and not os.path.exists(args.real_image_path):
-        os.makedirs(args.real_image_path)
-
-    # GPU setup
-    args.gpus = args.gpus if isinstance(args.gpus, list) else [args.gpus]
-    os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(gpu) for gpu in args.gpus])
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    data_cfg = yaml.load(open(args.data_config, 'r'), Loader=yaml.Loader)
-    data = PlantNet(**data_cfg, batch_size=1, image_size=args.image_size,
-                    num_workers=1)
-
-    # read config file for model
-    cfg = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
-    cfg_unet = yaml.load(open(args.unet_config, 'r'), Loader=yaml.Loader)
-    cfg_vae = yaml.load(open(args.vae_config, 'r'), Loader=yaml.Loader)
-
-    vae_model = VQGANLight(**cfg_vae['model'])
-    vae_model, _, _ = load_model_checkpoint(vae_model, args.vae_path, device)
-
-    unet = UNetLight(**cfg_unet)
-    unet, _, _ = load_model_checkpoint(unet, args.load_checkpoint_unet, device)
-
-    ddpm = DDPM(eps_model=unet, vae_model=vae_model, **cfg)
-    ddpm, _, _ = load_model_checkpoint(ddpm, args.load_checkpoint_ddpm, device)
-
-    global latent_dim
-    latent_dim = cfg_vae['model']['latent_dim']
-
     if args.sample_real:
+        if args.real_image_path and not os.path.exists(args.real_image_path):
+            os.makedirs(args.real_image_path)
+
+        data_cfg = yaml.load(open(args.data_config, 'r'), Loader=yaml.Loader)
+        data = PlantNet(**data_cfg, batch_size=1, image_size=args.image_size,
+                        num_workers=1)
         sample_images_real(data.test, args.image_count, args.real_image_path)
+
     if args.sample_gen:
+        if args.sample_gen and args.gen_image_path and not os.path.exists(args.gen_image_path):
+            os.makedirs(args.gen_image_path)
+
+        # GPU setup
+        args.gpus = args.gpus if isinstance(args.gpus, list) else [args.gpus]
+        os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(gpu) for gpu in args.gpus])
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        # read config file for model
+        cfg = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
+        cfg_unet = yaml.load(open(args.unet_config, 'r'), Loader=yaml.Loader)
+        cfg_vae = yaml.load(open(args.vae_config, 'r'), Loader=yaml.Loader)
+
+        vae_model = VQGANLight(**cfg_vae['model'])
+        vae_model, _, _ = load_model_checkpoint(vae_model, args.vae_path, device)
+
+        unet = UNetLight(**cfg_unet)
+        unet, _, _ = load_model_checkpoint(unet, args.load_checkpoint_unet, device)
+
+        ddpm = DDPM(eps_model=unet, vae_model=vae_model, **cfg)
+        ddpm, _, _ = load_model_checkpoint(ddpm, args.load_checkpoint_ddpm, device)
+
+        global latent_dim
+        latent_dim = cfg_vae['model']['latent_dim']
+
         sample_images_gen(ddpm, args.image_count, args.gen_image_path)
 
 
