@@ -21,9 +21,14 @@ class Encoder(nn.Module):
         kernel = 4
         stride = 2
 
-        self.conv1 = nn.Conv2d(in_channels, latent_dim // 2,
+        if latent_dim // 2 < 2:
+            hidden_channels = 2
+        else:
+            hidden_channels = latent_dim // 2
+
+        self.conv1 = nn.Conv2d(in_channels, hidden_channels,
                                kernel_size=kernel, stride=stride, padding=1)
-        self.conv2 = nn.Conv2d(latent_dim // 2, latent_dim,
+        self.conv2 = nn.Conv2d(hidden_channels, latent_dim,
                                kernel_size=kernel, stride=stride, padding=1)
 
         self.res_stack = nn.ModuleList([

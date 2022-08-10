@@ -26,9 +26,14 @@ class Decoder(nn.Module):
             for _ in range(n_res_layers)
         ])
 
-        self.conv1 = nn.ConvTranspose2d(latent_dim, latent_dim // 2,
+        if latent_dim // 2 < 2:
+            hidden_channels = 2
+        else:
+            hidden_channels = latent_dim // 2
+
+        self.conv1 = nn.ConvTranspose2d(latent_dim, hidden_channels,
                                         kernel_size=kernel, stride=stride, padding=1)
-        self.conv2 = nn.ConvTranspose2d(latent_dim // 2, out_channels,
+        self.conv2 = nn.ConvTranspose2d(hidden_channels, out_channels,
                                         kernel_size=kernel, stride=stride, padding=1)
 
         self.activation = nn.ReLU()
