@@ -53,8 +53,10 @@ parser.add_argument('--gpus', default=0, type=int,
                     nargs='+', metavar='GPUS', help='If GPU(s) available, which GPU(s) to use for training.')
 parser.add_argument('--ckpt-save', default=True, action=argparse.BooleanOptionalAction,
                     dest='save_checkpoint', help='Save checkpoints to folder')
-parser.add_argument('--load-ckpt', default=None, metavar='PATH',
-                    dest='load_checkpoint', help='Load model checkpoint and continue training')
+parser.add_argument('--load-ckpt_ddpm', default=None, metavar='PATH',
+                    dest='load_checkpoint_ddpm', help='Load model checkpoint and continue training')
+parser.add_argument('--load-ckpt_unet', default=None, metavar='PATH',
+                    dest='load_checkpoint_unet', help='Load model checkpoint and continue training')
 parser.add_argument('--log-save-interval', default=5, type=int, metavar='N',
                     dest='save_interval', help="Interval in which logs are saved to disk (default: 5)")
 parser.add_argument('--vae-path', default='',
@@ -124,8 +126,9 @@ def main():
     optimizer = torch.optim.Adam(unet.parameters(), args.lr)
 
     # resume training
-    if args.load_checkpoint:
-        ddpm, start_epoch, global_train_step = load_model_checkpoint(ddpm, args.load_checkpoint, device)
+    if args.load_checkpoint_ddpm:
+        unet, start_epoch, global_train_step = load_model_checkpoint(unet, args.load_checkpoint_unet, device)
+        ddpm, start_epoch, global_train_step = load_model_checkpoint(ddpm, args.load_checkpoint_ddpm, device)
         logger.global_train_step = global_train_step
         args.epochs += start_epoch
     else:

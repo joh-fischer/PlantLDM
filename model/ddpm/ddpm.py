@@ -223,8 +223,6 @@ class DDPM(nn.Module):
 
         for i in tqdm(reversed(range(0, self.n_steps)), desc='sampling loop time step', total=self.n_steps):
             img = self.p_sample(img, torch.full((b,), i, device=device, dtype=torch.long), i)
-            # later decoding expects the image to be quantized
-            img = self.vae_model.quantize(img)
             imgs.append(img)
         return imgs
 
