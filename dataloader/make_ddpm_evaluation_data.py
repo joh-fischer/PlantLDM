@@ -52,8 +52,11 @@ def main():
     for name, val in vars(args).items():
         print("{:<16}: {}".format(name, val))
 
-    if args.gen_image_path and not os.path.exists(args.gen_image_path):
+    if args.sample_gen and args.gen_image_path and not os.path.exists(args.gen_image_path):
         os.makedirs(args.gen_image_path)
+
+    if args.sample_real and args.real_image_path and not os.path.exists(args.real_image_path):
+        os.makedirs(args.real_image_path)
 
     # GPU setup
     args.gpus = args.gpus if isinstance(args.gpus, list) else [args.gpus]
@@ -104,7 +107,7 @@ def sample_images_gen(model, n_images, image_path):
     # we only want to sample x0 images
     sample_step = 0
 
-    images = model.sample(16, batch_size=n_images, channels=latent_dim, sample_step=sample_step)
+    images = model.sample(32, batch_size=n_images, channels=latent_dim, sample_step=sample_step)
     images = [img for img in images[0]]
     images = torch.stack(images)
     images = model.decode(images)
