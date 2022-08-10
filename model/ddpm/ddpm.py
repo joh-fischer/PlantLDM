@@ -205,12 +205,13 @@ class DDPM(nn.Module):
             return model_mean + torch.sqrt(posterior_variance_t) * noise
 
     @torch.no_grad()
-    def p_sample_loop(self, shape):
+    def p_sample_loop(self, shape, sample_step=None):
         """
         Implements Algorithm 2 of https://arxiv.org/abs/2006.11239 for sampling
 
         Args:
             shape: target shape of the sampled images
+            sample_step: if not None sampling only returns samples from specified timestep
         Returns:
             sampled images
         """
@@ -223,11 +224,15 @@ class DDPM(nn.Module):
 
         for i in tqdm(reversed(range(0, self.n_steps)), desc='sampling loop time step', total=self.n_steps):
             img = self.p_sample(img, torch.full((b,), i, device=device, dtype=torch.long), i)
-            imgs.append(img)
+            if sample_step is not None and i == sample_step:
+                print(f"appending: {i}")
+                imgs.append(img)
+            elif sample_step is None:
+                imgs.append(img)
         return imgs
 
     @torch.no_grad()
-    def sample(self, image_size, batch_size=16, channels=3):
+    def sample(self, image_size, batch_size=16, channels=3, sample_step=None):
         """
         sampling from the latent space
 
@@ -235,7 +240,8 @@ class DDPM(nn.Module):
             image_size: target size of the sampled images
             batch_size: number of sampled images
             channels: number of channels for the sampled images
+            sample_step: if not None sampling only returns samples from specified timestep
         Returns:
             sampled images
         """
-        return self.p_sample_loop(shape=(batch_size, channels, image_size, image_size))
+        return self.p_sample_loop(shape=(batch_size, channels, image_size, image_size), sample_step=sample_step)
