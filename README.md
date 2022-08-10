@@ -82,11 +82,9 @@ To first debug the code with `CIFAR10` just run
 python3 train_vqgan.py --epochs 2 --config configs/vqgan.yaml --debug
 ```
 
-#### Losses
+#### Model Settings
 
-You can specify which losses to use and which weights for which loss in the `vqgan.yaml` config file. The length of the
-channels list in the config files also determines the down-scaling of the input image. For example, a list with
-two channels (eg [32, 64]) down-samples the image by a factor of 4.
+You can specify the model settings in the `vqgan.yaml` config file. The length of the channels list in the config files also determines the down-scaling of the input image. For example, a list with two channels (eg [32, 64]) down-samples the image by a factor of 4.
 
 ```
 model:
@@ -99,7 +97,13 @@ model:
     n_heads: 4
   latent_dim: 32
   n_embeddings: 512
+```
 
+#### Losses
+
+You can specify which losses to use and which weights for which loss in the `vqgan.yaml` config file.
+
+```
 loss:
   rec_loss_type: 'L1'
   perceptual_weight: 0.1
