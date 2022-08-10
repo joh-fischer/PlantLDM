@@ -42,7 +42,7 @@ parser.add_argument('--num-workers', default=0, metavar='N',
 parser.add_argument('--lr', default=0.0002,
                     type=float, metavar='LR', help='Initial learning rate (default: 0.0002)')
 parser.add_argument('--config', default='configs/ddpm.yaml',
-                    metavar='PATH', help='Path to model config file (default: configs/ddpm.yaml)')
+                    metavar='PATH', help='Path to model config file (default: configs/ddpm_linear.yaml)')
 parser.add_argument('--unet-config', default='configs/unet.yaml',
                     metavar='PATH', help='Path to unet model config file (default: configs/unet.yaml)')
 parser.add_argument('--data-config', default='configs/data_se.yaml',
@@ -53,8 +53,10 @@ parser.add_argument('--gpus', default=0, type=int,
                     nargs='+', metavar='GPUS', help='If GPU(s) available, which GPU(s) to use for training.')
 parser.add_argument('--ckpt-save', default=True, action=argparse.BooleanOptionalAction,
                     dest='save_checkpoint', help='Save checkpoints to folder')
-parser.add_argument('--load-ckpt', default=None, metavar='PATH',
-                    dest='load_checkpoint', help='Load model checkpoint and continue training')
+parser.add_argument('--load-ckpt_ddpm', default=None, metavar='PATH',
+                    dest='load_checkpoint_ddpm', help='Load model checkpoint and continue training')
+parser.add_argument('--load-ckpt_unet', default=None, metavar='PATH',
+                    dest='load_checkpoint_unet', help='Load model checkpoint and continue training')
 parser.add_argument('--log-save-interval', default=5, type=int, metavar='N',
                     dest='save_interval', help="Interval in which logs are saved to disk (default: 5)")
 parser.add_argument('--vae-path', default='',
@@ -63,6 +65,7 @@ parser.add_argument('--vae-config', default='configs/vqgan.yaml',
                     metavar='PATH', help='Path to model config file (default: configs/vqgan.yaml)')
 
 logger = Logger(LOG_DIR)
+latent_dim = None
 
 
 def main():
@@ -71,7 +74,7 @@ def main():
         print("{:<16}: {}".format(name, val))
 
     # setup paths and logging
-    args.name = 'second_stage/' + args.name
+    args.name = 'second_stage/' + os.path.splitext(os.path.basename(args.config))[0]
     running_log_dir = os.path.join(LOG_DIR, args.name, f'{TIMESTAMP}')
     running_ckpt_dir_ddpm = os.path.join(CHECKPOINT_DIR, args.name, f'{TIMESTAMP}', "ddpm")
     running_ckpt_dir_unet = os.path.join(CHECKPOINT_DIR, args.name, f'{TIMESTAMP}', "unet")
@@ -111,6 +114,8 @@ def main():
 
     vae_model = VQGANLight(**cfg_vae['model'])
     vae_model, _, _ = load_model_checkpoint(vae_model, args.vae_path, device)
+    global latent_dim
+    latent_dim = cfg_vae['model']['latent_dim']
 
     unet = UNetLight(**cfg_unet)
     unet.to(device)
@@ -121,8 +126,9 @@ def main():
     optimizer = torch.optim.Adam(unet.parameters(), args.lr)
 
     # resume training
-    if args.load_checkpoint:
-        ddpm, start_epoch, global_train_step = load_model_checkpoint(ddpm, args.load_checkpoint, device)
+    if args.load_checkpoint_ddpm:
+        unet, start_epoch, global_train_step = load_model_checkpoint(unet, args.load_checkpoint_unet, device)
+        ddpm, start_epoch, global_train_step = load_model_checkpoint(ddpm, args.load_checkpoint_ddpm, device)
         logger.global_train_step = global_train_step
         args.epochs += start_epoch
     else:
@@ -149,8 +155,8 @@ def main():
         if (epoch + 1) % args.save_interval == 0 or (epoch + 1) == args.epochs:
             logger.save()
             if args.save_checkpoint:
-                save_model_checkpoint(unet, f"{running_ckpt_dir_ddpm}", logger)
-                save_model_checkpoint(ddpm, f"{running_ckpt_dir_unet}", logger)
+                save_model_checkpoint(unet, f"{running_ckpt_dir_unet}", logger)
+                save_model_checkpoint(ddpm, f"{running_ckpt_dir_ddpm}", logger)
 
         log2tensorboard_ddpm(logger, 'Train', ['ema_loss', 'loss'])
 
@@ -183,7 +189,7 @@ def validate(model):
     model.eval()
 
     n_images = 8
-    images = model.sample(32, batch_size=n_images, channels=3)
+    images = model.sample(16, batch_size=n_images, channels=latent_dim)
     images = [model.decode(img) for img in images]
 
     logger.tensorboard.add_figure('Val: DDPM',
