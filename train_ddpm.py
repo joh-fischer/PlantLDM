@@ -42,7 +42,7 @@ parser.add_argument('--num-workers', default=0, metavar='N',
 parser.add_argument('--lr', default=0.0002,
                     type=float, metavar='LR', help='Initial learning rate (default: 0.0002)')
 parser.add_argument('--config', default='configs/ddpm.yaml',
-                    metavar='PATH', help='Path to model config file (default: configs/ddpm.yaml)')
+                    metavar='PATH', help='Path to model config file (default: configs/ddpm_linear.yaml)')
 parser.add_argument('--unet-config', default='configs/unet.yaml',
                     metavar='PATH', help='Path to unet model config file (default: configs/unet.yaml)')
 parser.add_argument('--data-config', default='configs/data_se.yaml',
@@ -63,6 +63,7 @@ parser.add_argument('--vae-config', default='configs/vqgan.yaml',
                     metavar='PATH', help='Path to model config file (default: configs/vqgan.yaml)')
 
 logger = Logger(LOG_DIR)
+latent_dim = None
 
 
 def main():
@@ -111,6 +112,8 @@ def main():
 
     vae_model = VQGANLight(**cfg_vae['model'])
     vae_model, _, _ = load_model_checkpoint(vae_model, args.vae_path, device)
+    global latent_dim
+    latent_dim = cfg_vae['model']['latent_dim']
 
     unet = UNetLight(**cfg_unet)
     unet.to(device)
@@ -183,7 +186,7 @@ def validate(model):
     model.eval()
 
     n_images = 8
-    images = model.sample(32, batch_size=n_images, channels=3)
+    images = model.sample(16, batch_size=n_images, channels=latent_dim)
     images = [model.decode(img) for img in images]
 
     logger.tensorboard.add_figure('Val: DDPM',
