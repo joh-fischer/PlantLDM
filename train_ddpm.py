@@ -10,21 +10,22 @@ import yaml
 from tqdm import tqdm
 
 from dataloader import PlantNet, CIFAR10
+from model import VQGANLight
 from model.ddpm.ddpm import DDPM
 from model.unet import UNet
+from model.unet.unet_light import UNetLight
 from utils.helpers import timer, save_model_checkpoint, load_model_checkpoint, log2tensorboard_ddpm
 from utils.logger import Logger
 from utils.visualization import get_sample_images_for_ddpm
 
 # TODO: check if this is necessary
 # from: https://stackoverflow.com/questions/20554074/sklearn-omp-error-15-initializing-libiomp5md-dll-but-found-mk2iomp5md-dll-a
-os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 CHECKPOINT_DIR = os.path.join(pathlib.Path(__file__).parent.resolve(), 'checkpoints')
 LOG_DIR = os.path.join(pathlib.Path(__file__).parent.resolve(), 'logs')
 TIMESTAMP = datetime.now().strftime('%y-%m-%d_%H%M%S')
 
-# TODO: check if all of these are needed (just copied it from vqvae)
 parser = argparse.ArgumentParser(description="PyTorch Second Stage Training")
 parser.add_argument('--name', '-n', default='',
                     type=str, metavar='NAME', help='Model name and folder where logs are stored')
@@ -56,6 +57,10 @@ parser.add_argument('--load-ckpt', default=None, metavar='PATH',
                     dest='load_checkpoint', help='Load model checkpoint and continue training')
 parser.add_argument('--log-save-interval', default=5, type=int, metavar='N',
                     dest='save_interval', help="Interval in which logs are saved to disk (default: 5)")
+parser.add_argument('--vae-path', default='',
+                    metavar='PATH', help='Path to encoder/decoder model checkpoint (default: empty)')
+parser.add_argument('--vae-config', default='configs/vqgan.yaml',
+                    metavar='PATH', help='Path to model config file (default: configs/vqgan.yaml)')
 
 logger = Logger(LOG_DIR)
 
@@ -101,12 +106,16 @@ def main():
 
     # read config file for model
     cfg = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
-    cfg_unet = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
+    cfg_unet = yaml.load(open(args.unet_config, 'r'), Loader=yaml.Loader)
+    cfg_vae = yaml.load(open(args.vae_config, 'r'), Loader=yaml.Loader)
 
-    # TODO: get unet parameters via cfg_unet
-    unet = UNet(3, 128, 64, channels=[32, 64, 128, 256])
+    vae_model = VQGANLight(**cfg_vae['model'])
+    vae_model, _, _ = load_model_checkpoint(vae_model, args.vae_path, device)
+
+    unet = UNetLight(**cfg_unet)
     unet.to(device)
-    ddpm = DDPM(eps_model=unet, **cfg)
+
+    ddpm = DDPM(eps_model=unet, vae_model=vae_model, **cfg)
     ddpm.to(device)
 
     optimizer = torch.optim.Adam(unet.parameters(), args.lr)
@@ -143,6 +152,8 @@ def main():
                 save_model_checkpoint(unet, f"{running_ckpt_dir_ddpm}", logger)
                 save_model_checkpoint(ddpm, f"{running_ckpt_dir_unet}", logger)
 
+        log2tensorboard_ddpm(logger, 'Train', ['ema_loss', 'loss'])
+
     elapsed_time = timer(t_start, time.time())
     print(f"Total training time: {elapsed_time}")
 
@@ -164,10 +175,8 @@ def train(model, train_loader, optimizer, device):
             ema_loss = 0.9 * ema_loss + 0.1 * loss.item()
 
         metrics = {'ema_loss': ema_loss, 'loss': loss}
-        logger.log_metrics(metrics, phase='train', aggregate=True, n=x.shape[0])
+        logger.log_metrics(metrics, phase='Train', aggregate=True, n=x.shape[0])
 
-        if logger.global_train_step % 150 == 0:
-            log2tensorboard_ddpm(logger, 'Train DDPM', ['ema_loss', 'loss'])
 
 @torch.no_grad()
 def validate(model):
@@ -175,6 +184,7 @@ def validate(model):
 
     n_images = 8
     images = model.sample(32, batch_size=n_images, channels=3)
+    images = [model.decode(img) for img in images]
 
     logger.tensorboard.add_figure('Val: DDPM',
                                   get_sample_images_for_ddpm(images, n_ims=n_images),

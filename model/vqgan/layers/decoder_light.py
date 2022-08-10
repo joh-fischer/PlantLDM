@@ -38,11 +38,13 @@ class DecoderLight(nn.Module):
         self.up_blocks = nn.ModuleList([])
         prev_channel = self.channels[-1]
         for c in reversed(self.channels):
-            self.up_blocks.append(nn.Sequential(
-                ResidualBlock(prev_channel, c),
-                nn.ConvTranspose2d(c, c, kernel_size=4, stride=2, padding=1),
-                nn.LeakyReLU(0.2, True)
-            ))
+            self.up_blocks.append(
+                nn.Sequential(
+                    ResidualBlock(prev_channel, c),
+                    nn.ConvTranspose2d(c, c, kernel_size=4, stride=2, padding=1),
+                    nn.LeakyReLU(0.2, True)
+                )
+            )
             prev_channel = c
 
         # output
