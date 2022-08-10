@@ -155,8 +155,8 @@ def main():
         if (epoch + 1) % args.save_interval == 0 or (epoch + 1) == args.epochs:
             logger.save()
             if args.save_checkpoint:
-                save_model_checkpoint(unet, f"{running_ckpt_dir_ddpm}", logger)
-                save_model_checkpoint(ddpm, f"{running_ckpt_dir_unet}", logger)
+                save_model_checkpoint(unet, f"{running_ckpt_dir_unet}", logger)
+                save_model_checkpoint(ddpm, f"{running_ckpt_dir_ddpm}", logger)
 
         log2tensorboard_ddpm(logger, 'Train', ['ema_loss', 'loss'])
 
