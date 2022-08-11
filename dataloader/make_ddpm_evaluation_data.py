@@ -6,7 +6,7 @@ import yaml
 
 from tqdm import tqdm
 
-import utils.visualization
+from utils import tensor_to_image
 from dataloader import PlantNet
 from model import VQGANLight
 from model.ddpm.ddpm import DDPM
@@ -96,7 +96,7 @@ def main():
 def sample_images_real(data_loader, n_images, real_image_path):
     count = 0
     for x, _ in tqdm(data_loader, desc="sample_real_images"):
-        img = utils.visualization.tensor_to_image(torch.squeeze(x))
+        img = tensor_to_image(torch.squeeze(x))
         img.save(f"{real_image_path}/{count}.jpg")
 
         count += 1
@@ -116,7 +116,7 @@ def sample_images_gen(model, n_images, image_path):
     images = model.decode(images)
 
     for i, img in enumerate(images):
-        img = utils.visualization.tensor_to_image(img)
+        img = tensor_to_image(img)
         img.save(f"{image_path}/{i}.jpg")
 
 
