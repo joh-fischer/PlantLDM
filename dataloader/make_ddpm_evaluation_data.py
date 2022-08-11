@@ -6,7 +6,7 @@ import yaml
 
 from tqdm import tqdm
 
-from utils import tensor_to_image
+from utils.visualization import tensor_to_image
 from dataloader import PlantNet
 from model import VQGANLight
 from model.ddpm.ddpm import DDPM
