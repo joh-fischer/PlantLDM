@@ -83,7 +83,7 @@ class PlantNet:
                                         is_preprocessed=self.is_preprocessed, image_size=self.image_size)
         self.test_set.transform = self.test_transform
         self.test_loader = DataLoader(self.test_set, batch_size=self.batch_size,
-                                      shuffle=False, num_workers=num_workers)
+                                      shuffle=True, num_workers=num_workers)
 
         # invert normalization for tensor to image transform
         self.inv_normalize = transforms.Compose([
