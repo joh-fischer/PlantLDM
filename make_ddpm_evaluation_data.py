@@ -80,12 +80,15 @@ def main():
 
         vae_model = VQGANLight(**cfg_vae['model'])
         vae_model, _, _ = load_model_checkpoint(vae_model, args.vae_path, device)
+        vae_model.to(device)
 
         unet = UNetLight(**cfg_unet)
         unet, _, _ = load_model_checkpoint(unet, args.load_checkpoint_unet, device)
+        unet.to(device)
 
         ddpm = DDPM(eps_model=unet, vae_model=vae_model, **cfg)
         ddpm, _, _ = load_model_checkpoint(ddpm, args.load_checkpoint_ddpm, device)
+        ddpm.to(device)
 
         global latent_dim
         latent_dim = cfg_vae['model']['latent_dim']

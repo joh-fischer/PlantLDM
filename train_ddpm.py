@@ -113,6 +113,7 @@ def main():
 
     vae_model = VQGANLight(**cfg_vae['model'])
     vae_model, _, _ = load_model_checkpoint(vae_model, args.vae_path, device)
+    vae_model.to(device)
     global latent_dim
     latent_dim = cfg_vae['model']['latent_dim']
 
