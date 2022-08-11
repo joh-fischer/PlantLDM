@@ -113,19 +113,26 @@ def sample_images_gen(model, n_images, image_path):
     # we only want to sample x0 images
     sample_step = 0
 
-    images = model.sample(32, batch_size=n_images, channels=latent_dim, sample_step=sample_step)
-    images = [img for img in images[0]]
-    images = torch.stack(images)
-    images_split = torch.split(images, 100)
-    img_list = []
-    for images in images_split:
-        images = model.decode(images)
-        img_list.append(images)
+    max_sample_size = 128
+    step_count = 0
 
-    for i, images in enumerate(img_list):
+    while n_images > 0:
+        if n_images >= max_sample_size:
+            sample_size = max_sample_size
+        else:
+            sample_size = n_images
+
+        images = model.sample(32, batch_size=sample_size, channels=latent_dim, sample_step=sample_step)
+        images = [img for img in images[0]]
+        images = torch.stack(images)
+        images = model.decode(images)
+
         for n, img in enumerate(images):
             img = tensor_to_image(img)
-            img.save(f"{image_path}/{i}_{n}.jpg")
+            img.save(f"{image_path}/{step_count}_{n}.jpg")
+
+        n_images -= sample_size
+        step_count += 1
 
 
 if __name__ == "__main__":
