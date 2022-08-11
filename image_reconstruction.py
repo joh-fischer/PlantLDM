@@ -15,18 +15,20 @@ parser.add_argument('--dst', '-d', default='',
                     type=str, metavar='PATH', help='Target folder.')
 parser.add_argument('--model', '-m', default='vqgan', choices=['vqgan', 'vqvae'],
                     type=str, metavar='NAME', help='Which model to use.')
+parser.add_argument('--config', default='configs/vqgan.yaml',
+                    metavar='PATH', help='Path to model config file (default: configs/vqgan.yaml)')
 parser.add_argument('--prefix', default='',
                     type=str, metavar='PREFIX', help='Prefix for image naming.')
 parser.add_argument('-n', default=4, metavar='N',
                     type=int, help='Number of reconstructed images.')
-parser.add_argument('--config', default='configs/vqgan.yaml',
-                    metavar='PATH', help='Path to model config file (default: configs/vqgan.yaml)')
 parser.add_argument('--data-config', default=None, metavar='PATH',
                     help='Path to model config file (default: None)')
 parser.add_argument('--ckpt', default=None, metavar='PATH',
                     dest='ckpt', help='Load model checkpoint.')
 parser.add_argument('--gpus', default=0, type=int, nargs='+', metavar='GPUS',
                     help='If GPU(s) available, which GPU(s) to use for training.')
+parser.add_argument('--save-original', default=False, action=argparse.BooleanOptionalAction,
+                    dest='save_original', help='Whether or not to save original images.')
 
 
 IMG_DIR = 'data/reconstructions'
@@ -89,7 +91,8 @@ def main():
     prefix = args.prefix + '_' if args.prefix != "" else ''
     for i, (im, rec) in enumerate(zip(ims, recs)):
         rec.save(os.path.join(img_dir, f'{args.model}_{prefix}{i}_recon.png'))
-        im.save(os.path.join(img_dir, f'{args.model}_{prefix}{i}_original.png'))
+        if args.save_original:
+            im.save(os.path.join(img_dir, f'{args.model}_{prefix}{i}_original.png'))
 
 
 if __name__ == "__main__":
