@@ -25,7 +25,7 @@ parser.add_argument('-n', default=4, metavar='N',
                     type=int, help='Number of reconstructed images.')
 parser.add_argument('--data-config', default=None, metavar='PATH',
                     help='Path to model config file (default: None)')
-parser.add_argument('--gpus', default=0, type=int, nargs='+', metavar='GPUS',
+parser.add_argument('--gpus', default=None, nargs='+', metavar='GPUS',
                     help='If GPU(s) available, which GPU(s) to use for training.')
 parser.add_argument('--save-original', default=False, action=argparse.BooleanOptionalAction,
                     dest='save_original', help='Whether or not to save original images.')
@@ -45,7 +45,7 @@ def main():
 
     args.gpus = args.gpus if isinstance(args.gpus, list) else [args.gpus]
     if len(args.gpus) == 1:
-        device = torch.device(f'cuda:{args.gpus[0]}' if torch.cuda.is_available() else 'cpu')
+        device = torch.device(f'cuda:{args.gpus[0]}' if torch.cuda.is_available() and args.gpus[0] is not None else 'cpu')
     else:
         raise ValueError('Currently multi-gpu training is not possible')
     print("{:<16}: {}".format('device', device))
