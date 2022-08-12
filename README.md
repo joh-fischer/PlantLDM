@@ -1,5 +1,10 @@
 # PlantLDM
 
+<p align="center">
+  <img src="samples/generated_images.png" />
+</p>
+
+
 We implemented a latent diffusion model (Rombach et al., [2021](https://arxiv.org/abs/2112.10752)) for 
 the visual synthesis of plant images of the PlantNet-300K [dataset](https://github.com/plantnet/PlantNet-300K).
 The model is can be split into two stages. The first stages consists of a VQ-GAN
