@@ -1,7 +1,7 @@
 import torch
 from utils.helpers import count_parameters
 from model import VQGAN, VQVAE, VQGANLight
-from model import UNet
+from model import UNet, UNetLight
 from model.losses import LossFn
 import yaml
 
@@ -47,7 +47,7 @@ print("\t{:<12}: {}".format('decoder', count_parameters(model.decoder)))
 cfg_file = 'configs/unet.yaml'
 
 cfg = yaml.load(open(cfg_file, 'r'), Loader=yaml.Loader)
-model = UNet(**cfg)
+model = UNetLight(**cfg)
 
 print("U-Net")
 print("\t{:<12}: {}".format('total', count_parameters(model)))
