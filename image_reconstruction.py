@@ -17,14 +17,14 @@ parser.add_argument('--model', '-m', default='vqgan', choices=['vqgan', 'vqvae']
                     type=str, metavar='NAME', help='Which model to use.')
 parser.add_argument('--config', default='configs/vqgan.yaml',
                     metavar='PATH', help='Path to model config file (default: configs/vqgan.yaml)')
+parser.add_argument('--ckpt', default=None, metavar='PATH',
+                    dest='ckpt', help='Load model checkpoint.')
 parser.add_argument('--prefix', default='',
                     type=str, metavar='PREFIX', help='Prefix for image naming.')
 parser.add_argument('-n', default=4, metavar='N',
                     type=int, help='Number of reconstructed images.')
 parser.add_argument('--data-config', default=None, metavar='PATH',
                     help='Path to model config file (default: None)')
-parser.add_argument('--ckpt', default=None, metavar='PATH',
-                    dest='ckpt', help='Load model checkpoint.')
 parser.add_argument('--gpus', default=0, type=int, nargs='+', metavar='GPUS',
                     help='If GPU(s) available, which GPU(s) to use for training.')
 parser.add_argument('--save-original', default=False, action=argparse.BooleanOptionalAction,
@@ -35,7 +35,7 @@ IMG_DIR = 'data/reconstructions'
 
 
 BASE_CFG = {
-    'data_dir': '/home/johfi/Documents/dataset/data_128',
+    'data_dir': '/home/johannes-f/Documents/datasets/data_128',
     'is_preprocessed': True
 }
 
